@@ -141,7 +141,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         }
     }
 
-    // Note dialog
     if (showNoteDialog && currentExercise != null) {
         var tempNote by remember(currentExercise.name) { mutableStateOf(noteText) }
         AlertDialog(
@@ -242,9 +241,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         val earnedXP = LevelManager.xpForWorkout() + LevelManager.xpForStreak(streak)
                         val shape = RoundedCornerShape(14.dp)
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(shape)
+                            modifier = Modifier.fillMaxWidth().clip(shape)
                                 .background(Brush.horizontalGradient(listOf(Purple.copy(alpha = 0.2f), Purple.copy(alpha = 0.05f))))
                                 .border(1.dp, Purple.copy(alpha = 0.2f), shape)
                                 .padding(14.dp),
@@ -405,17 +402,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         },
         containerColor = Color.Black
     ) { padding ->
-        AnimatedVisibility(
-            visible = exerciseVisible,
-            enter = fadeIn(tween(350)) + slideInHorizontally(
-                initialOffsetX = { it / 4 },
-                animationSpec = tween(350, easing = FastOutSlowInEasing)
-            ),
-            exit = fadeOut(tween(250)) + slideOutHorizontally(
-                targetOffsetX = { -it / 4 },
-                animationSpec = tween(250, easing = FastOutSlowInEasing)
-            )
-        ) {
+        if (exerciseVisible) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),

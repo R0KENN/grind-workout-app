@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -21,20 +22,26 @@ fun GifImage(gifRes: Int, modifier: Modifier = Modifier) {
     if (gifRes == 0) return
 
     val context = LocalContext.current
-    val imageLoader = ImageLoader.Builder(context)
-        .components {
-            if (Build.VERSION.SDK_INT >= 28) {
-                add(ImageDecoderDecoder.Factory())
-            } else {
-                add(GifDecoder.Factory())
+
+    val imageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
             }
-        }
-        .build()
+            .build()
+    }
 
     AsyncImage(
-        model = ImageRequest.Builder(context)
-            .data("android.resource://${context.packageName}/${gifRes}")
-            .build(),
+        model = remember(gifRes) {
+            ImageRequest.Builder(context)
+                .data("android.resource://${context.packageName}/$gifRes")
+                .crossfade(true)
+                .build()
+        },
         contentDescription = null,
         imageLoader = imageLoader,
         contentScale = ContentScale.FillWidth,

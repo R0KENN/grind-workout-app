@@ -1,10 +1,7 @@
 package com.example.dumbbellworkout
 
 import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -55,27 +51,6 @@ fun calculateCompletedDays(context: Context): Int {
 }
 
 fun calculateTotalDays(): Int = SCHEDULE.values.count { it != "rest" }
-
-@Composable
-fun AnimatedItem(
-    index: Int,
-    content: @Composable () -> Unit
-) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(index * 60L)
-        visible = true
-    }
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(400)) + slideInVertically(
-            initialOffsetY = { 40 },
-            animationSpec = tween(400, easing = FastOutSlowInEasing)
-        )
-    ) {
-        content()
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,9 +161,9 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // ── Уровень + Серия + Неделя ──
+            // ── Уровень + Серия + Неделя (с анимацией) ──
             item(key = "top_stats") {
-                AnimatedItem(index = 0) {
+                AnimatedListItem(index = 0) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -295,9 +270,9 @@ fun HomeScreen(
                 }
             }
 
-            // ── Баннер восстановления серии ──
+            // ── Баннер восстановления серии (с анимацией) ──
             item(key = "recovery") {
-                AnimatedItem(index = 1) {
+                AnimatedListItem(index = 1) {
                     val missedDate = remember { StreakManager.getMissedTrainingDay(context) }
                     if (missedDate != null) {
                         val missedName = remember { StreakManager.getMissedWorkoutName(missedDate) }
@@ -350,9 +325,9 @@ fun HomeScreen(
                 }
             }
 
-            // ── Совет дня ──
+            // ── Совет дня (с анимацией) ──
             item(key = "advice") {
-                AnimatedItem(index = 2) {
+                AnimatedListItem(index = 2) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -369,9 +344,9 @@ fun HomeScreen(
                 }
             }
 
-            // ── Сегодняшняя тренировка ──
+            // ── Сегодняшняя тренировка (с анимацией) ──
             item(key = "today") {
-                AnimatedItem(index = 3) {
+                AnimatedListItem(index = 3) {
                     val bannerColor = if (isRestDay) Color(0xFF4CAF50) else Purple
                     Box(
                         modifier = Modifier
@@ -429,127 +404,71 @@ fun HomeScreen(
                 }
             }
 
-            // ── Челленджи ──
+            // ── Челленджи (БЕЗ анимации) ──
             item(key = "challenges") {
-                AnimatedItem(index = 4) {
-                    val challenges = remember { ChallengeManager.getWeeklyChallenges(context) }
-                    val shape = RoundedCornerShape(14.dp)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(shape)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.02f))
-                                )
+                val challenges = remember { ChallengeManager.getWeeklyChallenges(context) }
+                val shape = RoundedCornerShape(14.dp)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(shape)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.02f))
                             )
-                            .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
-                            .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("⚔️ Челленджи", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                            Text(
-                                "${challenges.count { it.isCompleted }}/${challenges.size}",
-                                fontSize = 13.sp,
-                                color = Purple
-                            )
-                        }
-                        challenges.forEach { ch ->
-                            val prog = if (ch.targetValue > 0) ch.currentValue.toFloat() / ch.targetValue else 0f
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(ch.icon, fontSize = 16.sp)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            ch.title,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = if (ch.isCompleted) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.8f)
-                                        )
-                                        Text(
-                                            if (ch.isCompleted) "✅" else "${ch.currentValue}/${ch.targetValue}",
-                                            fontSize = 11.sp,
-                                            color = if (ch.isCompleted) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.4f)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(3.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(3.dp)
-                                            .clip(RoundedCornerShape(2.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxHeight()
-                                                .fillMaxWidth(prog.coerceIn(0f, 1f))
-                                                .clip(RoundedCornerShape(2.dp))
-                                                .background(if (ch.isCompleted) Color(0xFF4CAF50) else Purple)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── Цитата ──
-            item(key = "quote") {
-                AnimatedItem(index = 5) {
-                    Text(
-                        "\"$todayQuote\"",
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.35f),
-                        textAlign = TextAlign.Center,
-                        lineHeight = 18.sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // ── Быстрые действия ──
-            item(key = "actions") {
-                AnimatedItem(index = 6) {
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        listOf(
-                            Triple("⚖️", "Вес", onNavigateToBodyweight),
-                            Triple("📈", "Графики", onNavigateToCharts),
-                            Triple("🗓️", "Карта", onNavigateToHeatMap),
-                            Triple("✏️", "Записи", onNavigateToEditLog),
-                            Triple("⚙️", "Ещё", onNavigateToSettings)
-                        ).forEach { (icon, label, action) ->
-                            Box(modifier = Modifier.weight(1f)) {
-                                val s = RoundedCornerShape(12.dp)
+                        Text("⚔️ Челленджи", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text(
+                            "${challenges.count { it.isCompleted }}/${challenges.size}",
+                            fontSize = 13.sp,
+                            color = Purple
+                        )
+                    }
+                    challenges.forEach { ch ->
+                        val prog = if (ch.targetValue > 0) ch.currentValue.toFloat() / ch.targetValue else 0f
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(ch.icon, fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        ch.title,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (ch.isCompleted) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.8f)
+                                    )
+                                    Text(
+                                        if (ch.isCompleted) "✅" else "${ch.currentValue}/${ch.targetValue}",
+                                        fontSize = 11.sp,
+                                        color = if (ch.isCompleted) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.4f)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(3.dp))
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(s)
-                                        .background(Color.White.copy(alpha = 0.05f))
-                                        .border(1.dp, Color.White.copy(alpha = 0.06f), s)
-                                        .clickable { action() }
-                                        .padding(vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
+                                        .height(3.dp)
+                                        .clip(RoundedCornerShape(2.dp))
+                                        .background(Color.White.copy(alpha = 0.08f))
                                 ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(icon, fontSize = 20.sp)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(prog.coerceIn(0f, 1f))
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(if (ch.isCompleted) Color(0xFF4CAF50) else Purple)
+                                    )
                                 }
                             }
                         }
@@ -557,64 +476,110 @@ fun HomeScreen(
                 }
             }
 
-            // ── Программы ──
-            item(key = "programs_title") {
-                AnimatedItem(index = 7) {
-                    Text(
-                        "Программы",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.4f),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
+            // ── Цитата (БЕЗ анимации) ──
+            item(key = "quote") {
+                Text(
+                    "\"$todayQuote\"",
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.35f),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+
+            // ── Быстрые действия (БЕЗ анимации) ──
+            item(key = "actions") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        Triple("⚖️", "Вес", onNavigateToBodyweight),
+                        Triple("📈", "Графики", onNavigateToCharts),
+                        Triple("🗓️", "Карта", onNavigateToHeatMap),
+                        Triple("✏️", "Записи", onNavigateToEditLog),
+                        Triple("⚙️", "Ещё", onNavigateToSettings)
+                    ).forEach { (icon, label, action) ->
+                        Box(modifier = Modifier.weight(1f)) {
+                            val s = RoundedCornerShape(12.dp)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(s)
+                                    .background(Color.White.copy(alpha = 0.05f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.06f), s)
+                                    .clickable { action() }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(icon, fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(label, fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
+            // ── Программы (БЕЗ анимации) ──
+            item(key = "programs_title") {
+                Text(
+                    "Программы",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
             val programs = ALL_WORKOUTS.values.filter { it.id != "rest" }.toList()
-            itemsIndexed(programs, key = { _, p -> p.id }) { idx, program ->
-                AnimatedItem(index = 8 + idx) {
-                    val shape = RoundedCornerShape(14.dp)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(shape)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.02f))
-                                )
+            itemsIndexed(programs, key = { _, p -> p.id }) { _, program ->
+                val shape = RoundedCornerShape(14.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(shape)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.02f))
                             )
-                            .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
-                            .clickable { onViewWorkout(program.id) }
-                            .padding(14.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val emoji = when {
-                                program.name.contains("PUSH", true) -> "💪"
-                                program.name.contains("PULL", true) -> "🏋️"
-                                program.name.contains("SQUAD", true) -> "🦵"
-                                program.name.contains("POWER", true) -> "⚡"
-                                else -> "🏋️"
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(Purple.copy(alpha = 0.15f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(emoji, fontSize = 18.sp)
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(program.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                Text(
-                                    "${program.exercises.size} упр. · ${program.time}",
-                                    fontSize = 11.sp,
-                                    color = Color.White.copy(alpha = 0.35f)
-                                )
-                            }
-                            Text("›", fontSize = 20.sp, color = Color.White.copy(alpha = 0.2f))
+                        )
+                        .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
+                        .clickable { onViewWorkout(program.id) }
+                        .padding(14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val emoji = when {
+                            program.name.contains("PUSH", true) -> "💪"
+                            program.name.contains("PULL", true) -> "🏋️"
+                            program.name.contains("SQUAD", true) -> "🦵"
+                            program.name.contains("POWER", true) -> "⚡"
+                            else -> "🏋️"
                         }
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Purple.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(emoji, fontSize = 18.sp)
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(program.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(
+                                "${program.exercises.size} упр. · ${program.time}",
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.35f)
+                            )
+                        }
+                        Text("›", fontSize = 20.sp, color = Color.White.copy(alpha = 0.2f))
                     }
                 }
             }

@@ -91,23 +91,13 @@ fun MainApp() {
         NavHost(
             navController = navController,
             startDestination = "home",
-            enterTransition = {
-                fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
-                        scaleIn(initialScale = 0.96f, animationSpec = tween(350, easing = FastOutSlowInEasing))
-            },
-            exitTransition = {
-                fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
-                        scaleOut(targetScale = 0.96f, animationSpec = tween(250, easing = FastOutSlowInEasing))
-            },
-            popEnterTransition = {
-                fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
-                        scaleIn(initialScale = 0.96f, animationSpec = tween(350, easing = FastOutSlowInEasing))
-            },
-            popExitTransition = {
-                fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
-                        scaleOut(targetScale = 0.96f, animationSpec = tween(250, easing = FastOutSlowInEasing))
-            }
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(animationSpec = tween(300)) },
+            exitTransition = { fadeOut(animationSpec = tween(200)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(300)) },
+            popExitTransition = { fadeOut(animationSpec = tween(200)) }
         ) {
+
             composable("home") {
                 HomeScreen(
                     onNavigateToStats = { navController.navigate("stats") },
