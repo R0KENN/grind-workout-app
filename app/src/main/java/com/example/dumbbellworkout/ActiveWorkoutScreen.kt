@@ -27,12 +27,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     val context = LocalContext.current
     val workout = ALL_WORKOUTS[workoutId] ?: return
+    val coroutineScope = rememberCoroutineScope()
 
     var exerciseIndex by remember { mutableIntStateOf(0) }
     var currentSet by remember { mutableIntStateOf(1) }
@@ -50,16 +52,13 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     var totalSets by remember { mutableIntStateOf(0) }
     var sessionRecords by remember { mutableIntStateOf(0) }
 
-    // Notes
     var showNoteDialog by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf("") }
 
-    // Transition animation
     var exerciseVisible by remember { mutableStateOf(true) }
 
     val currentExercise = workout.exercises.getOrNull(exerciseIndex)
 
-    // Load note when exercise changes
     LaunchedEffect(exerciseIndex) {
         val ex = workout.exercises.getOrNull(exerciseIndex)
         if (ex != null) {
@@ -89,8 +88,23 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     fun calculateCalories(tonnage: Float, minutes: Int): Int =
         (tonnage * 0.05f + minutes * 5.5f).toInt()
 
-    fun animateToNextExercise(nextIndex: Int) {
-        exerciseVisible = false
+    fun animateToNextExercise(nextIndex: Int, withRest: Boolean = false, restSec: Int = 0) {
+        coroutineScope.launch {
+            exerciseVisible = false
+            delay(300)
+            exerciseIndex = nextIndex
+            currentSet = 1
+            weightInput = WorkoutLog.getLastWeight(context, workout.exercises[nextIndex].name)?.toString() ?: ""
+            repsInput = workout.exercises[nextIndex].reps.replace(" на руку", "").replace(" на сторону", "")
+            if (withRest) {
+                restSecondsLeft = restSec
+                isResting = true
+            } else {
+                isResting = false
+            }
+            delay(100)
+            exerciseVisible = true
+        }
     }
 
     fun saveSet() {
@@ -109,11 +123,11 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         weightInput = ""; repsInput = ""
 
         if (currentSet < ex.sets) {
-            currentSet++; restSecondsLeft = ex.restSeconds; isResting = true
+            currentSet++
+            restSecondsLeft = ex.restSeconds
+            isResting = true
         } else if (exerciseIndex < workout.exercises.size - 1) {
-            val nextIdx = exerciseIndex + 1
-            exerciseVisible = false
-            exerciseIndex = nextIdx; currentSet = 1; restSecondsLeft = ex.restSeconds; isResting = true
+            animateToNextExercise(exerciseIndex + 1, withRest = true, restSec = ex.restSeconds)
         } else {
             isFinished = true; timerRunning = false
         }
@@ -121,8 +135,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
 
     fun skipExercise() {
         if (exerciseIndex < workout.exercises.size - 1) {
-            exerciseVisible = false
-            exerciseIndex++; currentSet = 1; isResting = false
+            animateToNextExercise(exerciseIndex + 1)
         } else {
             isFinished = true; timerRunning = false
         }
@@ -168,13 +181,11 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         )
     }
 
-    // ===== FINISH SCREEN 2.0 =====
+    // ===== FINISH SCREEN =====
     if (isFinished) {
         LaunchedEffect(Unit) {
-            // Проверяем: это восстановление пропущенной тренировки?
             val missedDate = StreakManager.getMissedTrainingDay(context)
             if (missedDate != null && StreakManager.getMissedWorkoutId(missedDate) == workoutId) {
-                // Восстанавливаем серию — записываем пропущенный день
                 StreakManager.recordRecovery(context, missedDate)
             }
             StreakManager.recordWorkout(context)
@@ -185,10 +196,8 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
 
         val calories = calculateCalories(sessionTonnage, elapsedSeconds / 60)
         val level = LevelManager.getUserLevel(context)
-        val xp = LevelManager.getTotalXP(context)
         val streak = StreakManager.getCurrentStreak(context)
 
-        // Load previous workout stats for comparison
         val prevTonnage = remember {
             val logs = WorkoutLog.loadAllLogs(context)
             val sortedDates = logs.keys.sorted()
@@ -199,7 +208,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         }
         val tonnageDiff = sessionTonnage - prevTonnage
 
-        // Animated entry
         var showContent by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { delay(300); showContent = true }
 
@@ -217,7 +225,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                 ) {
                     item { Spacer(modifier = Modifier.height(40.dp)) }
 
-                    // Trophy animation
                     item {
                         val scale by animateFloatAsState(
                             targetValue = if (showContent) 1f else 0f,
@@ -231,7 +238,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         Text("Тренировка завершена!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Purple)
                     }
 
-                    // XP earned
                     item {
                         val earnedXP = LevelManager.xpForWorkout() + LevelManager.xpForStreak(streak)
                         val shape = RoundedCornerShape(14.dp)
@@ -254,7 +260,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         }
                     }
 
-                    // Main stats
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -287,7 +292,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         }
                     }
 
-                    // Comparison with previous workout
                     if (prevTonnage > 0) {
                         item {
                             val shape = RoundedCornerShape(14.dp)
@@ -314,7 +318,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         }
                     }
 
-                    // Records this session
                     if (sessionRecords > 0) {
                         item {
                             val shape = RoundedCornerShape(14.dp)
@@ -330,7 +333,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         }
                     }
 
-                    // Streak
                     item {
                         val shape = RoundedCornerShape(14.dp)
                         Box(
@@ -344,7 +346,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         }
                     }
 
-                    // Home button
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         val shape = RoundedCornerShape(14.dp)
@@ -381,7 +382,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                             Text(formatTime(elapsedSeconds), fontSize = 11.sp, color = Color.White.copy(alpha = 0.4f))
                         }
                         Spacer(modifier = Modifier.weight(1f))
-                        // Note button
                         Box(
                             modifier = Modifier
                                 .clip(CircleShape)
@@ -405,11 +405,16 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         },
         containerColor = Color.Black
     ) { padding ->
-        // Animated exercise transition
         AnimatedVisibility(
             visible = exerciseVisible,
-            enter = fadeIn(tween(300)) + slideInHorizontally(tween(350)) { it / 3 },
-            exit = fadeOut(tween(200)) + slideOutHorizontally(tween(250)) { -it / 3 }
+            enter = fadeIn(tween(350)) + slideInHorizontally(
+                initialOffsetX = { it / 4 },
+                animationSpec = tween(350, easing = FastOutSlowInEasing)
+            ),
+            exit = fadeOut(tween(250)) + slideOutHorizontally(
+                targetOffsetX = { -it / 4 },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            )
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
@@ -439,7 +444,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 }
 
-                // Note preview
                 if (noteText.isNotBlank()) {
                     item(key = "note_preview") {
                         val shape = RoundedCornerShape(10.dp)
@@ -453,12 +457,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("📝", fontSize = 14.sp)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    noteText,
-                                    fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.5f),
-                                    maxLines = 2
-                                )
+                                Text(noteText, fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f), maxLines = 2)
                             }
                         }
                     }
@@ -489,7 +488,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 }
 
-                // History of previous sets
                 item(key = "history") {
                     val history = remember(exerciseIndex) { WorkoutLog.getExerciseHistory(context, currentExercise.name) }
                     if (history.isNotEmpty()) {
@@ -501,18 +499,15 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                                 .padding(12.dp)
                         ) {
                             Column {
-                                Text("📋 Прошлая тренировка", fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                                    color = Purple.copy(alpha = 0.7f))
+                                Text("📋 Прошлая тренировка", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Purple.copy(alpha = 0.7f))
                                 Spacer(modifier = Modifier.height(6.dp))
                                 history.forEach { set ->
                                     Row(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("Подход ${set.setNumber}", fontSize = 12.sp,
-                                            color = Color.White.copy(alpha = 0.35f))
-                                        Text("${set.weight} кг × ${set.reps}", fontSize = 12.sp,
-                                            fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.6f))
+                                        Text("Подход ${set.setNumber}", fontSize = 12.sp, color = Color.White.copy(alpha = 0.35f))
+                                        Text("${set.weight} кг × ${set.reps}", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = 0.6f))
                                     }
                                 }
                             }

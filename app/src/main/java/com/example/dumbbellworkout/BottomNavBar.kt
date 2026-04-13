@@ -21,6 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.core.animateFloatAsState
+
 
 data class BottomNavItem(
     val route: String,
@@ -116,10 +118,10 @@ fun GlassBottomNavBar(
                     val isSelected = currentRoute == item.route
 
                     val animatedScale by animateFloatAsState(
-                        targetValue = if (isSelected) 1.1f else 1f,
+                        targetValue = if (isSelected) 1.15f else 1f,
                         animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
+                            dampingRatio = 0.6f,
+                            stiffness = 300f
                         ),
                         label = "nav_scale"
                     )
@@ -139,9 +141,17 @@ fun GlassBottomNavBar(
                         label = "indicator"
                     )
 
+                    val bgAlpha by animateFloatAsState(
+                        targetValue = if (isSelected) 0.08f else 0f,
+                        animationSpec = tween(300),
+                        label = "nav_bg"
+                    )
+
                     Column(
                         modifier = Modifier
                             .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Purple.copy(alpha = bgAlpha))
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null

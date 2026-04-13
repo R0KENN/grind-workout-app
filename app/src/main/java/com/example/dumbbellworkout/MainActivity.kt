@@ -29,6 +29,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,69 +91,58 @@ fun MainApp() {
         NavHost(
             navController = navController,
             startDestination = "home",
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background),
             enterTransition = {
-                fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
+                fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+                        scaleIn(initialScale = 0.96f, animationSpec = tween(350, easing = FastOutSlowInEasing))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
+                fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                        scaleOut(targetScale = 0.96f, animationSpec = tween(250, easing = FastOutSlowInEasing))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing))
+                fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+                        scaleIn(initialScale = 0.96f, animationSpec = tween(350, easing = FastOutSlowInEasing))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
+                fadeOut(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                        scaleOut(targetScale = 0.96f, animationSpec = tween(250, easing = FastOutSlowInEasing))
             }
         ) {
             composable("home") {
                 HomeScreen(
-                    onStartWorkout = { id -> navController.navigate("active/$id") },
-                    onViewWorkout = { id -> navController.navigate("detail/$id") },
-                    onNavigateToStats = {
-                        navController.navigate("stats") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true; restoreState = true
-                        }
-                    },
-                    onNavigateToSchedule = {
-                        navController.navigate("schedule") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true; restoreState = true
-                        }
-                    },
+                    onNavigateToStats = { navController.navigate("stats") },
+                    onNavigateToSchedule = { navController.navigate("schedule") },
                     onNavigateToBodyweight = { navController.navigate("bodyweight") },
                     onNavigateToCharts = { navController.navigate("charts") },
                     onNavigateToEditLog = { navController.navigate("editlog") },
                     onNavigateToSettings = { navController.navigate("settings") },
-                    onNavigateToAchievements = {
-                        navController.navigate("achievements") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true; restoreState = true
-                        }
+                    onNavigateToAchievements = { navController.navigate("achievements") },
+                    onNavigateToHeatMap = { navController.navigate("heatmap") },
+                    onStartWorkout = { workoutId ->
+                        navController.navigate("active/$workoutId")
                     },
-                    onNavigateToHeatMap = { navController.navigate("heatmap") }
+                    onViewWorkout = { workoutId ->
+                        navController.navigate("detail/$workoutId")
+                    }
                 )
             }
 
             composable(
-                route = "detail/{id}",
+                "detail/{id}",
                 enterTransition = {
                     slideInHorizontally(
-                        initialOffsetX = { fullWidth -> fullWidth / 4 },
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(durationMillis = 400))
+                        initialOffsetX = { it / 3 },
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(tween(350))
                 },
                 popExitTransition = {
                     slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> fullWidth / 4 },
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 200))
+                        targetOffsetX = { it / 3 },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(tween(250))
                 }
-            ) { backStackEntry ->
-                val id = backStackEntry.arguments?.getString("id") ?: return@composable
+            ) {
+                val id = it.arguments?.getString("id") ?: return@composable
                 WorkoutDetailScreen(
                     workoutId = id,
                     onBack = { navController.popBackStack() },
@@ -159,72 +151,67 @@ fun MainApp() {
             }
 
             composable(
-                route = "active/{id}",
+                "active/{id}",
                 enterTransition = {
                     slideInVertically(
-                        initialOffsetY = { fullHeight -> fullHeight / 3 },
-                        animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(durationMillis = 450))
+                        initialOffsetY = { it / 2 },
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    ) + fadeIn(tween(400))
                 },
                 popExitTransition = {
                     slideOutVertically(
-                        targetOffsetY = { fullHeight -> fullHeight / 3 },
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 200))
+                        targetOffsetY = { it / 2 },
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeOut(tween(300))
                 }
-            ) { backStackEntry ->
-                val id = backStackEntry.arguments?.getString("id") ?: return@composable
+            ) {
+                val id = it.arguments?.getString("id") ?: return@composable
                 ActiveWorkoutScreen(
                     workoutId = id,
-                    onFinish = { navController.popBackStack("home", inclusive = false) }
+                    onFinish = { navController.popBackStack("home", false) }
                 )
             }
 
             composable("schedule") {
                 ScheduleScreen(onBack = { navController.popBackStack() })
             }
-
             composable("stats") {
                 StatsScreen(onBack = { navController.popBackStack() })
             }
-
             composable("bodyweight") {
                 BodyweightScreen(onBack = { navController.popBackStack() })
             }
-
             composable("charts") {
                 ChartsScreen(onBack = { navController.popBackStack() })
             }
-
             composable("editlog") {
                 EditLogScreen(onBack = { navController.popBackStack() })
             }
+            composable("achievements") {
+                AchievementsScreen(onBack = { navController.popBackStack() })
+            }
+            composable("heatmap") {
+                HeatMapScreen(onBack = { navController.popBackStack() })
+            }
 
             composable(
-                route = "settings",
+                "settings",
                 enterTransition = {
                     slideInVertically(
-                        initialOffsetY = { fullHeight -> fullHeight / 3 },
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(durationMillis = 400))
+                        initialOffsetY = { it / 4 },
+                        animationSpec = tween(400, easing = FastOutSlowInEasing)
+                    ) + fadeIn(tween(350))
                 },
                 popExitTransition = {
                     slideOutVertically(
-                        targetOffsetY = { fullHeight -> fullHeight / 3 },
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 200))
+                        targetOffsetY = { it / 4 },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(tween(250))
                 }
             ) {
                 SettingsScreen(onBack = { navController.popBackStack() })
             }
-
-            composable("achievements") {
-                AchievementsScreen(onBack = { navController.popBackStack() })
-            }
-
-            composable("heatmap") {
-                HeatMapScreen(onBack = { navController.popBackStack() })
-            }
         }
+
     }
 }
