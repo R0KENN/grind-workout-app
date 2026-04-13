@@ -194,30 +194,46 @@ fun HomeScreen(
                         }
                     }
 
-                    // Серия
+// Серия
                     Box(modifier = Modifier.weight(1f)) {
                         val shape = RoundedCornerShape(14.dp)
+                        val canRecover = remember { StreakManager.canRecoverStreak(context) }
+                        val missedDate = remember { StreakManager.getMissedTrainingDay(context) }
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(shape)
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(Color.White.copy(alpha = 0.07f), Color.White.copy(alpha = 0.02f))
+                                        listOf(
+                                            if (canRecover) Color(0xFFFF9800).copy(alpha = 0.1f) else Color.White.copy(alpha = 0.07f),
+                                            Color.White.copy(alpha = 0.02f)
+                                        )
                                     )
                                 )
-                                .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
+                                .border(1.dp, if (canRecover) Color(0xFFFF9800).copy(alpha = 0.2f) else Color.White.copy(alpha = 0.08f), shape)
                                 .padding(12.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("🔥", fontSize = 24.sp)
+                                Text(if (canRecover) "⚠️" else "🔥", fontSize = 24.sp)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("$currentStreak", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                Text("дней", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+                                Text(
+                                    "$currentStreak",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (canRecover) Color(0xFFFF9800) else Color.White
+                                )
+                                Text(
+                                    if (canRecover) "спаси!" else "дней",
+                                    fontSize = 11.sp,
+                                    color = if (canRecover) Color(0xFFFF9800).copy(alpha = 0.7f)
+                                    else Color.White.copy(alpha = 0.5f)
+                                )
                             }
                         }
                     }
+
 
                     // Неделя
                     Box(modifier = Modifier.weight(1f)) {
@@ -250,6 +266,60 @@ fun HomeScreen(
                     }
                 }
             }
+
+            // ── Баннер восстановления серии ──
+            item(key = "recovery") {
+                val missedDate = remember { StreakManager.getMissedTrainingDay(context) }
+                if (missedDate != null) {
+                    val missedName = remember { StreakManager.getMissedWorkoutName(missedDate) }
+                    val missedId = remember { StreakManager.getMissedWorkoutId(missedDate) }
+                    val shape = RoundedCornerShape(14.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(shape)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFFFF9800).copy(alpha = 0.2f), Color(0xFFFF9800).copy(alpha = 0.05f))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFF9800).copy(alpha = 0.25f), shape)
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "⚠️ Серия под угрозой!",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFFF9800)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    "Пройди $missedName чтобы восстановить",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFFFF9800).copy(alpha = 0.3f))
+                                    .border(1.dp, Color(0xFFFF9800).copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                    .clickable { onStartWorkout(missedId) }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Text("▶", fontSize = 16.sp, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // ── Совет дня (компактный) ──
             item(key = "advice") {

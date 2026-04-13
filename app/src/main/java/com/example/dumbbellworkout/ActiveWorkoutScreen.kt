@@ -171,6 +171,12 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     // ===== FINISH SCREEN 2.0 =====
     if (isFinished) {
         LaunchedEffect(Unit) {
+            // Проверяем: это восстановление пропущенной тренировки?
+            val missedDate = StreakManager.getMissedTrainingDay(context)
+            if (missedDate != null && StreakManager.getMissedWorkoutId(missedDate) == workoutId) {
+                // Восстанавливаем серию — записываем пропущенный день
+                StreakManager.recordRecovery(context, missedDate)
+            }
             StreakManager.recordWorkout(context)
             LevelManager.addXP(context, LevelManager.xpForWorkout())
             val streak = StreakManager.getCurrentStreak(context)

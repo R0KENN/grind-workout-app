@@ -116,21 +116,31 @@ object LevelManager {
 
 object StreakManager {
     private const val PREFS = "streak_prefs"
-    private const val KEY_CURRENT = "current_streak"
-    private const val KEY_BEST = "best_streak"
-    private const val KEY_LAST_DATE = "last_workout_date"
     private const val KEY_DATES = "workout_dates"
+    private const val KEY_RECOVERY = "recovery_done"
 
     private fun dateFormat() = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-    fun getCurrentStreak(context: Context): Int =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_CURRENT, 0)
+    private fun dayIndex(dateStr: String): Int {
+        val cal = Calendar.getInstance()
+        cal.time = dateFormat().parse(dateStr) ?: return -1
+        return when (cal.get(Calendar.DAY_OF_WEEK)) {
+            Calendar.MONDAY -> 0; Calendar.TUESDAY -> 1; Calendar.WEDNESDAY -> 2
+            Calendar.THURSDAY -> 3; Calendar.FRIDAY -> 4; Calendar.SATURDAY -> 5
+            Calendar.SUNDAY -> 6; else -> 0
+        }
+    }
 
-    fun getBestStreak(context: Context): Int =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_BEST, 0)
+    private fun isTrainingDay(dateStr: String): Boolean {
+        val idx = dayIndex(dateStr)
+        val key = SCHEDULE[idx] ?: "rest"
+        return key != "rest"
+    }
 
-    fun getLastDate(context: Context): String =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LAST_DATE, "") ?: ""
+    private fun getWorkoutIdForDate(dateStr: String): String {
+        val idx = dayIndex(dateStr)
+        return SCHEDULE[idx] ?: "rest"
+    }
 
     fun getWorkoutDates(context: Context): Set<String> =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -139,30 +149,136 @@ object StreakManager {
     fun recordWorkout(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val today = dateFormat().format(Date())
-        val lastDate = prefs.getString(KEY_LAST_DATE, "") ?: ""
-
-        if (lastDate == today) return // already recorded today
-
-        val currentStreak = prefs.getInt(KEY_CURRENT, 0)
-        val bestStreak = prefs.getInt(KEY_BEST, 0)
         val dates = (prefs.getStringSet(KEY_DATES, emptySet()) ?: emptySet()).toMutableSet()
-
-        val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_MONTH, -1) }
-        val yesterdayStr = dateFormat().format(yesterday.time)
-
-        val newStreak = if (lastDate == yesterdayStr) currentStreak + 1 else 1
-        val newBest = maxOf(bestStreak, newStreak)
-
         dates.add(today)
+        prefs.edit().putStringSet(KEY_DATES, dates).apply()
+    }
 
+    // Записать восстановление пропущенного дня
+    fun recordRecovery(context: Context, missedDate: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val dates = (prefs.getStringSet(KEY_DATES, emptySet()) ?: emptySet()).toMutableSet()
+        dates.add(missedDate)
+        // Сохраняем что восстановление выполнено
         prefs.edit()
-            .putInt(KEY_CURRENT, newStreak)
-            .putInt(KEY_BEST, newBest)
-            .putString(KEY_LAST_DATE, today)
             .putStringSet(KEY_DATES, dates)
+            .putString(KEY_RECOVERY, "")
             .apply()
     }
+
+    // Найти пропущенный тренировочный день (ближайший назад от сегодня)
+    fun getMissedTrainingDay(context: Context): String? {
+        val df = dateFormat()
+        val today = df.format(Date())
+        val dates = getWorkoutDates(context)
+        val cal = Calendar.getInstance()
+
+        // Если сегодня тренировочный день и ещё не пройден — это не пропуск, день идёт
+        // Начинаем проверку со вчера
+        cal.add(Calendar.DAY_OF_MONTH, -1)
+
+        // Ищем максимум 7 дней назад
+        for (i in 0..6) {
+            val dateStr = df.format(cal.time)
+            if (isTrainingDay(dateStr) && dateStr !in dates) {
+                return dateStr // нашли пропущенный день
+            }
+            if (isTrainingDay(dateStr) && dateStr in dates) {
+                return null // предыдущий тренировочный день пройден — пропусков нет
+            }
+            cal.add(Calendar.DAY_OF_MONTH, -1)
+        }
+        return null
+    }
+
+    // Получить название тренировки для пропущенного дня
+    fun getMissedWorkoutName(missedDate: String): String {
+        val workoutId = getWorkoutIdForDate(missedDate)
+        return ALL_WORKOUTS[workoutId]?.name ?: ""
+    }
+
+    // Получить ID тренировки для пропущенного дня
+    fun getMissedWorkoutId(missedDate: String): String {
+        return getWorkoutIdForDate(missedDate)
+    }
+
+    // Можно ли восстановить серию
+    fun canRecoverStreak(context: Context): Boolean {
+        return getMissedTrainingDay(context) != null
+    }
+
+    fun getCurrentStreak(context: Context): Int {
+        val dates = getWorkoutDates(context)
+        val df = dateFormat()
+        val cal = Calendar.getInstance()
+        var streak = 0
+
+        while (true) {
+            val dateStr = df.format(cal.time)
+
+            if (isTrainingDay(dateStr)) {
+                if (dateStr in dates) {
+                    streak++
+                } else {
+                    val today = df.format(Date())
+                    if (dateStr == today) {
+                        cal.add(Calendar.DAY_OF_MONTH, -1)
+                        continue
+                    } else {
+                        break
+                    }
+                }
+            }
+
+            cal.add(Calendar.DAY_OF_MONTH, -1)
+
+            val daysBack = ((Date().time - cal.time.time) / (1000 * 60 * 60 * 24)).toInt()
+            if (daysBack > 400 || streak > 365) break
+        }
+
+        return streak
+    }
+
+    fun getBestStreak(context: Context): Int {
+        val dates = getWorkoutDates(context)
+        if (dates.isEmpty()) return 0
+
+        val df = dateFormat()
+        val sortedDates = dates.sorted()
+        val firstDate = df.parse(sortedDates.first()) ?: return 0
+        val lastDate = df.parse(sortedDates.last()) ?: return 0
+
+        val cal = Calendar.getInstance()
+        cal.time = firstDate
+
+        var bestStreak = 0
+        var currentStreak = 0
+
+        while (true) {
+            val dateStr = df.format(cal.time)
+
+            if (isTrainingDay(dateStr)) {
+                if (dateStr in dates) {
+                    currentStreak++
+                    bestStreak = maxOf(bestStreak, currentStreak)
+                } else {
+                    currentStreak = 0
+                }
+            }
+
+            cal.add(Calendar.DAY_OF_MONTH, 1)
+            if (dateStr > sortedDates.last()) break
+        }
+
+        return maxOf(bestStreak, getCurrentStreak(context))
+    }
+
+    fun getLastDate(context: Context): String {
+        return getWorkoutDates(context).maxOrNull() ?: ""
+    }
 }
+
+
 
 // ─── Еженедельные челленджи ───
 
