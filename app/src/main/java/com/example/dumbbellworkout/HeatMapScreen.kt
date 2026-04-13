@@ -238,34 +238,21 @@ private fun getHeatColor(intensity: Int): Color = when (intensity) {
 }
 
 private fun getWorkoutIntensityMap(context: Context): Map<String, Int> {
-    val prefs = context.getSharedPreferences("workout_log", Context.MODE_PRIVATE)
-    val allEntries = prefs.all
+    val allLogs = WorkoutLog.loadAllLogs(context)
     val dateIntensity = mutableMapOf<String, Int>()
-    val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-    allEntries.forEach { (_, value) ->
-        if (value is String) {
-            try {
-                val parts = value.split("|")
-                parts.forEach { entry ->
-                    val fields = entry.split(",")
-                    if (fields.size >= 3) {
-                        val timestamp = fields[0].toLongOrNull() ?: 0L
-                        if (timestamp > 0) {
-                            val date = df.format(Date(timestamp))
-                            dateIntensity[date] = (dateIntensity[date] ?: 0) + 1
-                        }
-                    }
-                }
-            } catch (_: Exception) {}
+    for ((date, log) in allLogs) {
+        if (log.sets.isNotEmpty()) {
+            dateIntensity[date] = log.sets.size
         }
     }
 
-    // normalize to 0-4 scale
-    val maxSets = dateIntensity.values.maxOrNull() ?: 1
+    if (dateIntensity.isEmpty()) return emptyMap()
+
+    val maxSets = dateIntensity.values.max()
     return dateIntensity.mapValues { (_, sets) ->
         when {
-            sets == 0 -> 0
+            sets <= 0 -> 0
             sets <= maxSets * 0.25 -> 1
             sets <= maxSets * 0.5 -> 2
             sets <= maxSets * 0.75 -> 3
@@ -273,3 +260,5 @@ private fun getWorkoutIntensityMap(context: Context): Map<String, Int> {
         }
     }
 }
+
+

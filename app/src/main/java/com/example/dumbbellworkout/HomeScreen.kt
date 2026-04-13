@@ -26,31 +26,29 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 fun calculateCompletedDays(context: Context): Int {
-    val prefs = context.getSharedPreferences("workout_log", Context.MODE_PRIVATE)
-    val allEntries = prefs.all
+    val allLogs = WorkoutLog.loadAllLogs(context)
     val cal = Calendar.getInstance()
-    cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+    val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    // Находим начало текущей недели (понедельник)
+    while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+        cal.add(Calendar.DAY_OF_MONTH, -1)
+    }
     cal.set(Calendar.HOUR_OF_DAY, 0)
     cal.set(Calendar.MINUTE, 0)
     cal.set(Calendar.SECOND, 0)
-    val weekStart = cal.timeInMillis
-    val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    val workoutDays = mutableSetOf<String>()
-    allEntries.forEach { (_, value) ->
-        if (value is String) {
-            try {
-                value.split("|").forEach { entry ->
-                    val fields = entry.split(",")
-                    if (fields.size >= 3) {
-                        val ts = fields[0].toLongOrNull() ?: 0L
-                        if (ts >= weekStart) workoutDays.add(df.format(Date(ts)))
-                    }
-                }
-            } catch (_: Exception) {}
-        }
+    cal.set(Calendar.MILLISECOND, 0)
+    val weekStart = cal.time
+
+    return allLogs.count { (dateStr, log) ->
+        if (log.sets.isEmpty()) return@count false
+        try {
+            val date = df.parse(dateStr)
+            date != null && !date.before(weekStart)
+        } catch (_: Exception) { false }
     }
-    return workoutDays.size
 }
+
 
 fun calculateTotalDays(): Int = SCHEDULE.values.count { it != "rest" }
 

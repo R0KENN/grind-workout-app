@@ -256,45 +256,39 @@ object ChallengeManager {
     )
 
     private fun getWeeklyStats(context: Context): WeeklyStats {
-        val prefs = context.getSharedPreferences("workout_log", Context.MODE_PRIVATE)
-        val recordPrefs = context.getSharedPreferences("records_prefs", Context.MODE_PRIVATE)
-        val allEntries = prefs.all
+        val allLogs = WorkoutLog.loadAllLogs(context)
+        val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
+        // Находим начало текущей недели (понедельник)
         val cal = Calendar.getInstance()
-        cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+        while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) {
+            cal.add(Calendar.DAY_OF_MONTH, -1)
+        }
         cal.set(Calendar.HOUR_OF_DAY, 0)
         cal.set(Calendar.MINUTE, 0)
         cal.set(Calendar.SECOND, 0)
-        val weekStart = cal.timeInMillis
+        cal.set(Calendar.MILLISECOND, 0)
+        val weekStart = cal.time
 
         var tonnage = 0f
         var sets = 0
         val workoutDays = mutableSetOf<String>()
-        val df = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-        allEntries.forEach { (key, value) ->
-            if (value is String && key.contains("_")) {
-                try {
-                    val parts = value.split("|")
-                    parts.forEach { entry ->
-                        val fields = entry.split(",")
-                        if (fields.size >= 3) {
-                            val timestamp = fields[0].toLongOrNull() ?: 0L
-                            if (timestamp >= weekStart) {
-                                val weight = fields[1].toFloatOrNull() ?: 0f
-                                val reps = fields[2].toIntOrNull() ?: 0
-                                tonnage += weight * reps
-                                sets++
-                                workoutDays.add(df.format(Date(timestamp)))
-                            }
-                        }
-                    }
-                } catch (_: Exception) {}
+        for ((dateStr, log) in allLogs) {
+            if (log.sets.isEmpty()) continue
+            val date = try { df.parse(dateStr) } catch (_: Exception) { null } ?: continue
+            if (date.before(weekStart)) continue
+
+            workoutDays.add(dateStr)
+            for (s in log.sets) {
+                tonnage += s.weight * s.reps
+                sets++
             }
         }
 
+        val recordPrefs = context.getSharedPreferences("records_prefs", Context.MODE_PRIVATE)
         val records = recordPrefs.getInt("weekly_records", 0)
-        val durationMinutes = (sets * 1.5f) // rough estimate
+        val durationMinutes = sets * 1.5f
         val calories = tonnage * 0.05f + durationMinutes * 5.5f
 
         return WeeklyStats(tonnage, workoutDays.size, records, sets, calories)
