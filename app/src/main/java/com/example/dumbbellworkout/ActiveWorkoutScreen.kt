@@ -475,6 +475,53 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 }
 
+                item(key = "overload_suggestion") {
+                    val suggestion = remember(exerciseIndex) {
+                        // Будет загружаться через ViewModel позже;
+                        // Пока можно использовать синхронный вызов
+                        kotlinx.coroutines.runBlocking {
+                            com.example.dumbbellworkout.data.repository.WorkoutRepository(context)
+                                .getProgressiveOverloadSuggestion(
+                                    currentExercise.name,
+                                    currentExercise.reps.replace(" на руку", "")
+                                        .replace(" на сторону", "")
+                                        .split("-").lastOrNull()?.trim()?.toIntOrNull() ?: 12
+                                )
+                        }
+                    }
+                    if (suggestion != null) {
+                        val shape = RoundedCornerShape(12.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(shape)
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.08f))
+                                .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.15f), shape)
+                                .padding(12.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    "📈 Прогрессивная перегрузка",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF4CAF50)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Рекомендуем: ${suggestion.suggestedWeight} кг (было ${suggestion.currentWeight} кг)",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    suggestion.reason,
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.35f)
+                                )
+                            }
+                        }
+                    }
+                }
+
                 item(key = "history") {
                     val history = remember(exerciseIndex) { WorkoutLog.getExerciseHistory(context, currentExercise.name) }
                     if (history.isNotEmpty()) {
