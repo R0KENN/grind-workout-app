@@ -30,6 +30,9 @@ fun SettingsScreen(onBack: () -> Unit) {
     var hour by remember { mutableIntStateOf(NotificationHelper.getSavedHour(context)) }
     var minute by remember { mutableIntStateOf(NotificationHelper.getSavedMinute(context)) }
     var testSent by remember { mutableStateOf(false) }
+    var progressionStep by remember { mutableFloatStateOf(UserPreferences.getProgressionStep(context)) }
+    var autosuggestEnabled by remember { mutableStateOf(UserPreferences.isAutosuggestEnabled(context)) }
+    val (haptic, view) = rememberHaptics()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -94,6 +97,91 @@ fun SettingsScreen(onBack: () -> Unit) {
                     }
                 }
             }
+
+            // ── Прогрессия весов ──
+            val progressionShape = RoundedCornerShape(14.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(progressionShape)
+                    .background(Color.White.copy(alpha = 0.04f))
+                    .border(1.dp, Color.White.copy(alpha = 0.06f), progressionShape)
+                    .padding(16.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("⚡", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Автоподсказка веса", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                        Text(
+                            "Предлагать вес для следующего подхода на основе прошлой тренировки",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.5f),
+                            lineHeight = 14.sp
+                        )
+                    }
+                    Switch(
+                        checked = autosuggestEnabled,
+                        onCheckedChange = {
+                            Haptics.click(haptic)
+                            autosuggestEnabled = it
+                            UserPreferences.setAutosuggestEnabled(context, it)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Purple,
+                            uncheckedThumbColor = Color.White.copy(alpha = 0.5f),
+                            uncheckedTrackColor = Color.White.copy(alpha = 0.1f)
+                        )
+                    )
+                }
+
+                if (autosuggestEnabled) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        "Шаг прогрессии: ${"%.1f".format(progressionStep)} кг",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(1.0f, 1.25f, 2.0f, 2.5f, 5.0f).forEach { step ->
+                            val isSelected = kotlin.math.abs(progressionStep - step) < 0.01f
+                            val chipShape = RoundedCornerShape(8.dp)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(chipShape)
+                                    .background(if (isSelected) Purple.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.04f))
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) Purple.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.05f),
+                                        chipShape
+                                    )
+                                    .clickable {
+                                        Haptics.click(haptic)
+                                        progressionStep = step
+                                        UserPreferences.setProgressionStep(context, step)
+                                    }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "${"%.2f".format(step).trimEnd('0').trimEnd('.')}",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Purple else Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Time picker
             if (isEnabled) {

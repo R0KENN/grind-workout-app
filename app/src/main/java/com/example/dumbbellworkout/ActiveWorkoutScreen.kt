@@ -39,6 +39,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     val (haptic, view) = rememberHaptics()
 
     var exerciseIndex by remember { mutableIntStateOf(0) }
+    var showExitDialog by remember { mutableStateOf(false) }
     var currentSet by remember { mutableIntStateOf(1) }
     var isResting by remember { mutableStateOf(false) }
     var isFinished by remember { mutableStateOf(false) }
@@ -47,6 +48,21 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     var restSecondsLeft by remember { mutableIntStateOf(0) }
     var showRecord by remember { mutableStateOf(false) }
     var recordOldWeight by remember { mutableFloatStateOf(0f) }
+    var weightSuggestion by remember { mutableStateOf<WorkoutLog.WeightSuggestion?>(null) }
+    val autosuggestEnabled = remember { UserPreferences.isAutosuggestEnabled(context) }
+    val progressionStep = remember { UserPreferences.getProgressionStep(context) }
+    var editingSet by remember { mutableStateOf<LoggedSet?>(null) }
+    var completedSetsToday by remember { mutableStateOf(listOf<LoggedSet>()) }
+
+// Перезагружаем список выполненных подходов текущего упражнения при смене упражнения и при сохранении подхода
+    LaunchedEffect(exerciseIndex, totalSets) {
+        val ex = workout.exercises.getOrNull(exerciseIndex) ?: return@LaunchedEffect
+        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+        val today = sdf.format(java.util.Date())
+        completedSetsToday = WorkoutLog.loadAllLogs(context)[today]?.sets
+            ?.filter { it.exerciseName == ex.name }
+            ?: emptyList()
+    }
 
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     var timerRunning by remember { mutableStateOf(true) }
@@ -65,6 +81,18 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         val ex = workout.exercises.getOrNull(exerciseIndex)
         if (ex != null) {
             noteText = NotesManager.getNote(context, ex.name)
+
+            // Подсказка веса для первого подхода нового упражнения
+            if (currentSet == 1 && weightInput.isEmpty()) {
+                weightSuggestion = if (autosuggestEnabled) {
+                    WorkoutLog.suggestWeight(context, ex.name, ex.reps, progressionStep)
+                } else null
+
+                weightSuggestion?.suggestedWeight?.let { w ->
+                    val s = "%.1f".format(w)
+                    weightInput = if (s.endsWith(".0")) s.dropLast(2) else s
+                }
+            }
         }
         exerciseVisible = true
     }
@@ -96,7 +124,16 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
             delay(300)
             exerciseIndex = nextIndex
             currentSet = 1
-            weightInput = WorkoutLog.getLastWeight(context, workout.exercises[nextIndex].name)?.toString() ?: ""
+            val nextEx = workout.exercises[nextIndex]
+            weightSuggestion = if (autosuggestEnabled) {
+                WorkoutLog.suggestWeight(context, nextEx.name, nextEx.reps, progressionStep)
+            } else null
+
+            weightInput = weightSuggestion?.suggestedWeight?.let { w ->
+                // Округляем до 1 знака после запятой и убираем хвостовой ".0"
+                val s = "%.1f".format(w)
+                if (s.endsWith(".0")) s.dropLast(2) else s
+            } ?: WorkoutLog.getLastWeight(context, nextEx.name)?.toString() ?: ""
             repsInput = workout.exercises[nextIndex].reps.replace(" на руку", "").replace(" на сторону", "")
             if (withRest) {
                 restSecondsLeft = restSec
@@ -126,6 +163,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         WorkoutLog.addSet(context, LoggedSet(ex.name, currentSet, w, r))
         sessionTonnage += w * r; totalSets++
         weightInput = ""; repsInput = ""
+        weightSuggestion = null  // показывали один раз — больше не надо
 
         if (currentSet < ex.sets) {
             currentSet++
@@ -136,6 +174,34 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         } else {
             isFinished = true; timerRunning = false
         }
+    }
+
+    // ── Подсказка прогрессии ──
+    weightSuggestion?.takeIf { it.delta != 0f }?.let { sug ->
+        val shape = RoundedCornerShape(10.dp)
+        val accent = if (sug.delta > 0) Color(0xFF4CAF50) else Color(0xFFFFA726)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(accent.copy(alpha = 0.12f))
+                .border(1.dp, accent.copy(alpha = 0.3f), shape)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(if (sug.delta > 0) "📈" else "📉", fontSize = 16.sp)
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "${if (sug.delta > 0) "+" else ""}${"%.1f".format(sug.delta)} кг",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accent
+                )
+                Text(sug.reason, fontSize = 11.sp, color = Color.White.copy(alpha = 0.6f))
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
     }
 
     fun skipExercise() {
@@ -184,6 +250,120 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
             containerColor = Color(0xFF1A1A2E),
             shape = RoundedCornerShape(20.dp)
         )
+    }
+
+    // ── Диалог редактирования подхода ──
+    editingSet?.let { setToEdit ->
+        var newWeight by remember(setToEdit) { mutableStateOf(setToEdit.weight.toString()) }
+        var newReps by remember(setToEdit) { mutableStateOf(setToEdit.reps.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { editingSet = null },
+            title = { Text("Редактировать подход ${setToEdit.setNumber}", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newWeight,
+                        onValueChange = { newWeight = it },
+                        label = { Text("Вес, кг") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Purple,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.1f)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newReps,
+                        onValueChange = { newReps = it },
+                        label = { Text("Повторений") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Purple,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.1f)
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val w = newWeight.replace(",", ".").toFloatOrNull()
+                    val r = newReps.toIntOrNull()
+                    if (w != null && r != null) {
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                        val today = sdf.format(java.util.Date())
+                        WorkoutLog.updateSet(context, today, setToEdit, w, r)
+                        // Пересчитываем сессионную статистику
+                        sessionTonnage += (w * r) - (setToEdit.weight * setToEdit.reps)
+                        Haptics.confirm(haptic)
+                        editingSet = null
+                        // триггерим перезагрузку списка
+                        totalSets = totalSets // no-op чтобы стрельнул LaunchedEffect
+                    }
+                }) { Text("Сохранить", color = Purple) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                        val today = sdf.format(java.util.Date())
+                        WorkoutLog.deleteSet(context, today, setToEdit)
+                        sessionTonnage -= setToEdit.weight * setToEdit.reps
+                        totalSets -= 1
+                        if (currentSet > 1) currentSet -= 1
+                        Haptics.reject(view, haptic)
+                        editingSet = null
+                    }) { Text("Удалить", color = Color(0xFFE57373)) }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TextButton(onClick = { editingSet = null }) {
+                        Text("Отмена", color = Color.White.copy(alpha = 0.5f))
+                    }
+                }
+            },
+            containerColor = Color(0xFF1A1A2E),
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
+    // ── Выполненные подходы текущего упражнения ──
+    if (completedSetsToday.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "Сделано: ${completedSetsToday.size}",
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.4f)
+            )
+            completedSetsToday.forEach { set ->
+                val shape = RoundedCornerShape(8.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(shape)
+                        .background(Color.White.copy(alpha = 0.04f))
+                        .border(1.dp, Color.White.copy(alpha = 0.05f), shape)
+                        .clickable {
+                            Haptics.click(haptic)
+                            editingSet = set
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("#${set.setNumber}", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        "${set.weight} кг × ${set.reps}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text("✏️", fontSize = 12.sp)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
     }
 
     // ===== FINISH SCREEN =====
@@ -401,7 +581,11 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = {
                         Haptics.click(haptic)
-                        onFinish()
+                        if (totalSets > 0) {
+                            showExitDialog = true
+                        } else {
+                            onFinish()
+                        }
                     }) {
                         Icon(Icons.Default.Close, contentDescription = "Закрыть", tint = Color.White)
                     }
@@ -596,6 +780,53 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 }
 
+                // ── Диалог подтверждения выхода ──
+                if (showExitDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showExitDialog = false },
+                        title = { Text("Завершить тренировку?", fontWeight = FontWeight.Bold, fontSize = 17.sp) },
+                        text = {
+                            Column {
+                                Text(
+                                    "У тебя уже $totalSets ${pluralSets(totalSets)} в этой сессии.",
+                                    fontSize = 14.sp,
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    "Прогресс уже сохранён. Выйти сейчас или показать итоги?",
+                                    fontSize = 13.sp,
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                Haptics.heavy(view, haptic)
+                                showExitDialog = false
+                                isFinished = true       // запускаем экран итогов
+                                timerRunning = false
+                            }) { Text("Показать итоги", color = Purple, fontWeight = FontWeight.Bold) }
+                        },
+                        dismissButton = {
+                            Row {
+                                TextButton(onClick = {
+                                    Haptics.reject(view, haptic)
+                                    showExitDialog = false
+                                    onFinish()
+                                }) { Text("Выйти без итогов", color = Color.White.copy(alpha = 0.6f)) }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                TextButton(onClick = { showExitDialog = false }) {
+                                    Text("Отмена", color = Color.White.copy(alpha = 0.4f))
+                                }
+                            }
+                        },
+                        containerColor = Color(0xFF1A1A2E),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                }
+
                 if (!isResting) {
                     item(key = "weight_input") {
                         OutlinedTextField(
@@ -639,5 +870,14 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                 item(key = "bottom_spacer") { Spacer(modifier = Modifier.height(8.dp)) }
             }
         }
+    }
+}
+private fun pluralSets(n: Int): String {
+    val mod10 = n % 10
+    val mod100 = n % 100
+    return when {
+        mod10 == 1 && mod100 != 11 -> "подход"
+        mod10 in 2..4 && mod100 !in 12..14 -> "подхода"
+        else -> "подходов"
     }
 }
