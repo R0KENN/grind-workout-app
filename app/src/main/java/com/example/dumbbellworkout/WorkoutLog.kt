@@ -102,13 +102,8 @@ object WorkoutLog {
      */
     fun hasEarlyMorningWorkout(context: Context): Boolean {
         val allLogs = loadAllLogs(context)
-        val cal = Calendar.getInstance()
         for ((_, log) in allLogs) {
             for (s in log.sets) {
-                // У LoggedSet нет своего timestamp, но дата лога есть.
-                // Считаем "раннюю пташку" по полю time в LoggedSet, если оно заполнено.
-                // Сейчас time у нас пустой при сохранении — поэтому фолбэк по setNumber=1
-                // и наличию времени, которое мы будем записывать (см. Фичу 4).
                 if (s.time.isNotEmpty()) {
                     val parts = s.time.split(":")
                     val hour = parts.getOrNull(0)?.toIntOrNull() ?: continue
@@ -192,12 +187,13 @@ object WorkoutLog {
             saveAllLogs(context, allLogs)
         }
     }
+
     // Get last workout history for a specific exercise (for in-workout display)
     fun getExerciseHistory(context: Context, exerciseName: String): List<LoggedSet> {
         val allLogs = loadAllLogs(context)
         val today = today()
         for (date in allLogs.keys.sortedDescending()) {
-            if (date == today) continue // skip today's ongoing workout
+            if (date == today) continue
             val log = allLogs[date] ?: continue
             val sets = log.sets.filter { it.exerciseName == exerciseName }
             if (sets.isNotEmpty()) return sets
@@ -266,9 +262,6 @@ object WorkoutLog {
 
     /**
      * Результат подсказки веса для следующего подхода.
-     * @param suggestedWeight рекомендуемый вес
-     * @param delta изменение относительно последнего: > 0 — прогресс, < 0 — снижение, 0 — без изменений
-     * @param reason человекочитаемая причина для подсказки в UI
      */
     data class WeightSuggestion(
         val suggestedWeight: Float,
@@ -278,15 +271,6 @@ object WorkoutLog {
 
     /**
      * Рассчитывает подсказку веса для упражнения на основе последней (не сегодняшней) тренировки.
-     *
-     * Логика:
-     * - Берём последнюю тренировку, где это упражнение выполнялось.
-     * - Парсим верхнюю границу диапазона повторений из самого упражнения (например, "8-10" -> 10).
-     * - Если ВСЕ подходы прошлой сессии были выполнены с reps >= верхней границы — даём +шаг.
-     * - Если ВСЕ подходы были выполнены с reps < нижней границы — даём -шаг (deload).
-     * - Иначе — оставляем тот же вес.
-     *
-     * Если упражнение никогда не выполнялось — возвращает null (нечего подсказывать).
      */
     fun suggestWeight(
         context: Context,
@@ -301,7 +285,6 @@ object WorkoutLog {
         val allLogs = loadAllLogs(context)
         val today = today()
 
-        // Ищем последнюю прошлую тренировку, в которой это упражнение есть.
         val lastSets = allLogs.keys
             .filter { it != today }
             .sortedDescending()
@@ -336,105 +319,16 @@ object WorkoutLog {
 
     /**
      * Парсит строку диапазона повторений типа "8-10", "8–10", "10-12 /ногу", "до отказа".
-     * Возвращает пару (min, max) или null, если распарсить не удалось.
      */
     private fun parseRepRange(raw: String): Pair<Int, Int>? {
-        // Убираем суффиксы типа "/ногу", "/руку", "/сторону", "сек"
         val cleaned = raw
             .substringBefore('/')
             .replace("сек", "", ignoreCase = true)
             .replace("повт", "", ignoreCase = true)
             .trim()
 
-        // "до отказа" и прочие нестандартные строки — не парсим
         if (cleaned.none { it.isDigit() }) return null
 
-        // Поддерживаем оба тире: "-" и "–"
-        val parts = cleaned.split('-', '–').map { it.trim() }
-        return when (parts.size) {
-            1 -> parts[0].toIntOrNull()?.let { it to it }
-            2 -> {
-                val a = parts[0].toIntOrNull() ?: return null
-                val b = parts[1].toIntOrNull() ?: return null
-                a to b
-            }
-            else -> null
-        }
-    }
-
-    /**
-     * Рассчитывает подсказку веса для упражнения на основе последней (не сегодняшней) тренировки.
-     *
-     * Логика:
-     * - Берём последнюю тренировку, где это упражнение выполнялось.
-     * - Парсим верхнюю границу диапазона повторений из самого упражнения (например, "8-10" -> 10).
-     * - Если ВСЕ подходы прошлой сессии были выполнены с reps >= верхней границы — даём +шаг.
-     * - Если ВСЕ подходы были выполнены с reps < нижней границы — даём -шаг (deload).
-     * - Иначе — оставляем тот же вес.
-     *
-     * Если упражнение никогда не выполнялось — возвращает null (нечего подсказывать).
-     */
-    fun suggestWeight(
-        context: Context,
-        exerciseName: String,
-        repRange: String,
-        progressionStepKg: Float
-    ): WeightSuggestion? {
-        val (minReps, maxReps) = parseRepRange(repRange) ?: return null
-
-        val allLogs = loadAllLogs(context)
-        val today = today()
-
-        // Ищем последнюю прошлую тренировку, в которой это упражнение есть.
-        val lastSets = allLogs.keys
-            .filter { it != today }
-            .sortedDescending()
-            .firstNotNullOfOrNull { date ->
-                val sets = allLogs[date]?.sets?.filter { it.exerciseName == exerciseName }
-                if (!sets.isNullOrEmpty()) sets else null
-            } ?: return null
-
-        val lastWeight = lastSets.last().weight
-
-        // Все подходы выполнены в верхней границе или выше -> прогресс
-        val allHitTop = lastSets.all { it.reps >= maxReps }
-        val allBelowBottom = lastSets.all { it.reps < minReps }
-
-        return when {
-            allHitTop -> WeightSuggestion(
-                suggestedWeight = lastWeight + progressionStepKg,
-                delta = progressionStepKg,
-                reason = "Все подходы в верхней границе — пора прибавить"
-            )
-            allBelowBottom -> WeightSuggestion(
-                suggestedWeight = (lastWeight - progressionStepKg).coerceAtLeast(0f),
-                delta = -progressionStepKg,
-                reason = "В прошлый раз не дотянул — снизим вес"
-            )
-            else -> WeightSuggestion(
-                suggestedWeight = lastWeight,
-                delta = 0f,
-                reason = "Повторяем прошлый вес"
-            )
-        }
-    }
-
-    /**
-     * Парсит строку диапазона повторений типа "8-10", "8–10", "10-12 /ногу", "до отказа".
-     * Возвращает пару (min, max) или null, если распарсить не удалось.
-     */
-    private fun parseRepRange(raw: String): Pair<Int, Int>? {
-        // Убираем суффиксы типа "/ногу", "/руку", "/сторону", "сек"
-        val cleaned = raw
-            .substringBefore('/')
-            .replace("сек", "", ignoreCase = true)
-            .replace("повт", "", ignoreCase = true)
-            .trim()
-
-        // "до отказа" и прочие нестандартные строки — не парсим
-        if (cleaned.none { it.isDigit() }) return null
-
-        // Поддерживаем оба тире: "-" и "–"
         val parts = cleaned.split('-', '–').map { it.trim() }
         return when (parts.size) {
             1 -> parts[0].toIntOrNull()?.let { it to it }
