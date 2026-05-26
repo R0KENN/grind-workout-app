@@ -162,7 +162,7 @@ fun WeeklyMuscleVolumeChart(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxHeight()
-                                        .fillMaxWidth(fraction)
+                                        .weight(fraction)  // ← БЫЛО .fillMaxWidth(fraction)
                                         .background(muscleColors[muscle] ?: Color.Gray)
                                 )
                             }

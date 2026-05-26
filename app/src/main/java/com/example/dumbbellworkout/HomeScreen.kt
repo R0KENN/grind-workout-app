@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dumbbellworkout.ui.components.*
 import com.example.dumbbellworkout.viewmodel.HomeViewModel
+val (haptic, view) = rememberHaptics()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

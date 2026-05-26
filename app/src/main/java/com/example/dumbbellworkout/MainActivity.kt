@@ -25,32 +25,58 @@ import com.example.dumbbellworkout.data.repository.WorkoutRepository
 import com.example.dumbbellworkout.ui.screens.HistoryScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.animation.doOnEnd
+import android.animation.ObjectAnimator
+import android.view.View
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ВАЖНО: installSplashScreen() должен быть вызван до super.onCreate()
+        val splashScreen = installSplashScreen()
+
+        // Держим сплеш на экране, пока флаг не станет false (мы его поставим
+        // после миграции данных и первой композиции).
+        var keepSplash = true
+        splashScreen.setKeepOnScreenCondition { keepSplash }
+
+        // Анимация выхода: иконка плавно уменьшается и исчезает.
+        splashScreen.setOnExitAnimationListener { splashScreenView ->
+            val fadeOut = ObjectAnimator.ofFloat(splashScreenView.view, View.ALPHA, 1f, 0f)
+            val scaleX = ObjectAnimator.ofFloat(splashScreenView.iconView, View.SCALE_X, 1f, 0.6f)
+            val scaleY = ObjectAnimator.ofFloat(splashScreenView.iconView, View.SCALE_Y, 1f, 0.6f)
+            fadeOut.duration = 350L
+            scaleX.duration = 350L
+            scaleY.duration = 350L
+            fadeOut.doOnEnd { splashScreenView.remove() }
+            scaleX.start()
+            scaleY.start()
+            fadeOut.start()
+        }
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         MotivationalNotifications.schedule(this, 10, 0)
+
         setContent {
             WorkoutTheme {
                 // Миграция данных из SharedPreferences в Room
-                val scope = rememberCoroutineScope()
                 LaunchedEffect(Unit) {
-                    scope.launch(Dispatchers.IO) {
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {
                         WorkoutRepository(applicationContext).migrateFromSharedPrefs(applicationContext)
                     }
+                    // Минимальная задержка, чтобы сплеш не моргнул на быстрых устройствах
+                    kotlinx.coroutines.delay(300)
+                    keepSplash = false
                 }
 
-                var showSplash by remember { mutableStateOf(true) }
-                if (showSplash) {
-                    SplashScreen(onFinished = { showSplash = false })
-                } else {
-                    MainApp()
-                }
+                MainApp()
             }
         }
     }
 }
+
 
 @Composable
 fun MainApp() {

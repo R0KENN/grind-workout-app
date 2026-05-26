@@ -37,6 +37,7 @@ fun GlassBottomNavBar(
     onNavigate: (String) -> Unit,
     onStartWorkout: () -> Unit
 ) {
+    val (haptic, view) = rememberHaptics()
     val items = listOf(
         BottomNavItem("home", "🏠", "Главная"),
         BottomNavItem("schedule", "📅", "Расписание"),

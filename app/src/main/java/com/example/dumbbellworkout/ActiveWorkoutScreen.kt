@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dumbbellworkout.data.repository.WorkoutRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -35,6 +36,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     val context = LocalContext.current
     val workout = ALL_WORKOUTS[workoutId] ?: return
     val coroutineScope = rememberCoroutineScope()
+    val (haptic, view) = rememberHaptics()
 
     var exerciseIndex by remember { mutableIntStateOf(0) }
     var currentSet by remember { mutableIntStateOf(1) }
@@ -112,10 +114,13 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         val r = repsInput.toIntOrNull() ?: return
         val ex = currentExercise ?: return
 
+        Haptics.confirm(haptic)
+
         val oldMax = WorkoutLog.getMaxWeight(context, ex.name)
         if (w > oldMax && oldMax > 0) {
             showRecord = true; recordOldWeight = oldMax; sessionRecords++
             VibrationHelper.vibrateRecord(context)
+            Haptics.heavy(view, haptic)
         }
 
         WorkoutLog.addSet(context, LoggedSet(ex.name, currentSet, w, r))
@@ -134,6 +139,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     }
 
     fun skipExercise() {
+        Haptics.click(haptic)
         if (exerciseIndex < workout.exercises.size - 1) {
             animateToNextExercise(exerciseIndex + 1)
         } else {
@@ -393,8 +399,11 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { timerRunning = false; onFinish() }) {
-                        Icon(Icons.Default.Close, "Закрыть", tint = Color.White.copy(alpha = 0.6f))
+                    IconButton(onClick = {
+                        Haptics.click(haptic)
+                        onFinish()
+                    }) {
+                        Icon(Icons.Default.Close, contentDescription = "Закрыть", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -420,7 +429,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
 
                 item(key = "gif") {
                     if (currentExercise.gifRes != 0) {
-                        GifImage(gifRes = currentExercise.gifRes, modifier = Modifier.padding(vertical = 4.dp))
+                        GifImage(gifRes = currentExercise.gifRes, exerciseName = currentExercise.name, modifier = Modifier.padding(vertical = 4.dp))
                     }
                 }
 
@@ -480,7 +489,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         // Будет загружаться через ViewModel позже;
                         // Пока можно использовать синхронный вызов
                         kotlinx.coroutines.runBlocking {
-                            com.example.dumbbellworkout.data.repository.WorkoutRepository(context)
+                            WorkoutRepository(context)
                                 .getProgressiveOverloadSuggestion(
                                     currentExercise.name,
                                     currentExercise.reps.replace(" на руку", "")

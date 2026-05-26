@@ -6,6 +6,7 @@ import com.example.dumbbellworkout.data.db.*
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.iterator
 
 class WorkoutRepository(context: Context) {
 
@@ -200,7 +201,7 @@ class WorkoutRepository(context: Context) {
         val allSets = dao.getAllSets()
         val dateSetCount = allSets.groupBy { it.date }.mapValues { it.value.size }
         if (dateSetCount.isEmpty()) return emptyMap()
-        val maxSets = dateSetCount.values.max()
+        val maxSets = dateSetCount.values.maxOrNull() ?: return emptyMap()
         return dateSetCount.mapValues { (_, sets) ->
             when {
                 sets <= 0 -> 0

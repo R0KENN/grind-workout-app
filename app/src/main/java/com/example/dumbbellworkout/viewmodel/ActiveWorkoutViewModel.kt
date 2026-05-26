@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dumbbellworkout.*
+import com.example.dumbbellworkout.data.db.WorkoutSetEntity
 import com.example.dumbbellworkout.data.repository.OverloadSuggestion
 import com.example.dumbbellworkout.data.repository.WorkoutRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -26,7 +28,7 @@ data class ActiveWorkoutUiState(
     val exerciseVisible: Boolean = true,
     val lastWeight: Float? = null,
     val overloadSuggestion: OverloadSuggestion? = null,
-    val exerciseHistorySets: List<com.example.dumbbellworkout.data.db.WorkoutSetEntity> = emptyList(),
+    val exerciseHistorySets: List<WorkoutSetEntity> = emptyList(),
     val prevTonnage: Float = 0f
 )
 
@@ -127,7 +129,7 @@ class ActiveWorkoutViewModel(application: Application) : AndroidViewModel(applic
         )
 
         viewModelScope.launch {
-            kotlinx.coroutines.delay(300)
+            delay(300)
             _uiState.value = _uiState.value.copy(
                 exerciseIndex = nextIndex,
                 currentSet = 1,

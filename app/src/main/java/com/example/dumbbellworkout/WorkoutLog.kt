@@ -81,6 +81,44 @@ object WorkoutLog {
 
     fun getTodayTonnage(context: Context): Float = calculateTonnage(context, today())
 
+    /**
+     * Максимальный тоннаж за одну тренировку за всё время.
+     * Используется для ачивок типа "Наберите 5000 кг тоннажа за тренировку",
+     * чтобы достижение не "терялось" на следующий день.
+     */
+    fun getMaxWorkoutTonnage(context: Context): Float {
+        val allLogs = loadAllLogs(context)
+        var max = 0f
+        for ((_, log) in allLogs) {
+            val t = log.sets.sumOf { (it.weight * it.reps).toDouble() }.toFloat()
+            if (t > max) max = t
+        }
+        return max
+    }
+
+    /**
+     * Был ли хотя бы один подход выполнен до 8:00 утра по локальному времени.
+     * Используется для ачивки "Ранняя пташка".
+     */
+    fun hasEarlyMorningWorkout(context: Context): Boolean {
+        val allLogs = loadAllLogs(context)
+        val cal = Calendar.getInstance()
+        for ((_, log) in allLogs) {
+            for (s in log.sets) {
+                // У LoggedSet нет своего timestamp, но дата лога есть.
+                // Считаем "раннюю пташку" по полю time в LoggedSet, если оно заполнено.
+                // Сейчас time у нас пустой при сохранении — поэтому фолбэк по setNumber=1
+                // и наличию времени, которое мы будем записывать (см. Фичу 4).
+                if (s.time.isNotEmpty()) {
+                    val parts = s.time.split(":")
+                    val hour = parts.getOrNull(0)?.toIntOrNull() ?: continue
+                    if (hour < 8) return true
+                }
+            }
+        }
+        return false
+    }
+
     fun calculateStreak(context: Context): Triple<Int, Int, Int> {
         val allLogs = loadAllLogs(context)
         val dates = allLogs.filter { it.value.sets.isNotEmpty() }.keys.sorted()

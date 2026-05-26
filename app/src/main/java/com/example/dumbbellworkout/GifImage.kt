@@ -17,8 +17,10 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 
+
+
 @Composable
-fun GifImage(gifRes: Int, modifier: Modifier = Modifier) {
+fun GifImage(gifRes: Int, modifier: Modifier = Modifier, exerciseName: String = "") {
     if (gifRes == 0) return
 
     val context = LocalContext.current
@@ -35,6 +37,7 @@ fun GifImage(gifRes: Int, modifier: Modifier = Modifier) {
             .build()
     }
 
+
     AsyncImage(
         model = remember(gifRes) {
             ImageRequest.Builder(context)
@@ -42,7 +45,7 @@ fun GifImage(gifRes: Int, modifier: Modifier = Modifier) {
                 .crossfade(true)
                 .build()
         },
-        contentDescription = null,
+        contentDescription = if (exerciseName.isNotBlank()) "Анимация упражнения: $exerciseName" else "Анимация упражнения",
         imageLoader = imageLoader,
         contentScale = ContentScale.FillWidth,
         modifier = modifier

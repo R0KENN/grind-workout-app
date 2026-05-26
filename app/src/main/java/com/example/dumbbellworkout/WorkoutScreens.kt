@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dumbbellworkout.data.repository.WorkoutRepository
 import com.example.dumbbellworkout.ui.components.WeeklyMuscleVolumeChart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -332,7 +333,7 @@ fun StatsScreen(onBack: () -> Unit) {
     }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            val repo = com.example.dumbbellworkout.data.repository.WorkoutRepository(context)
+            val repo = WorkoutRepository(context)
             weeklyMuscleVolume = repo.getWeeklyMuscleVolume()
         }
     }

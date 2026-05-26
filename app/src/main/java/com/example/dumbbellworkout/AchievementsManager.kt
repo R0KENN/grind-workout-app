@@ -47,7 +47,7 @@ object AchievementsManager {
         Achievement("bodyweight_7", "Следящий за собой", "Запишите вес тела 7 раз", "📊", 7, "bodyweight"),
         Achievement("bodyweight_30", "Дисциплина", "Запишите вес тела 30 раз", "📈", 30, "bodyweight"),
 
-        Achievement("early_bird", "Ранняя пташка", "Первая тренировка завершена!", "🐣", 1, "workouts"),
+        Achievement("early_bird", "Ранняя пташка", "Завершите подход до 8:00 утра", "🐣", 1, "early_morning"),
     )
 
     fun getUnlocked(context: Context): Set<String> {
@@ -69,9 +69,10 @@ object AchievementsManager {
         val allLogs = WorkoutLog.loadAllLogs(context)
         val totalWorkouts = allLogs.count { it.value.sets.isNotEmpty() }
         val (streak, _, _) = WorkoutLog.calculateStreak(context)
-        val todayTonnage = WorkoutLog.getTodayTonnage(context)
+        val maxWorkoutTonnage = WorkoutLog.getMaxWorkoutTonnage(context)
         val bodyweightEntries = WorkoutLog.loadBodyweight(context).size
         val totalSets = allLogs.values.sumOf { it.sets.size }
+        val hasEarlyMorning = WorkoutLog.hasEarlyMorningWorkout(context)
 
         // Count records
         val allExercises = ALL_WORKOUTS.values.flatMap { it.exercises }.distinctBy { it.name }
@@ -87,10 +88,11 @@ object AchievementsManager {
             val currentValue = when (achievement.type) {
                 "workouts" -> totalWorkouts
                 "streak" -> streak
-                "tonnage" -> todayTonnage.toInt()
+                "tonnage" -> maxWorkoutTonnage.toInt()
                 "records" -> recordCount
                 "total_sets" -> totalSets
                 "bodyweight" -> bodyweightEntries
+                "early_morning" -> if (hasEarlyMorning) 1 else 0
                 else -> 0
             }
 
@@ -111,7 +113,8 @@ object AchievementsManager {
         val allLogs = WorkoutLog.loadAllLogs(context)
         val totalWorkouts = allLogs.count { it.value.sets.isNotEmpty() }
         val (streak, _, _) = WorkoutLog.calculateStreak(context)
-        val todayTonnage = WorkoutLog.getTodayTonnage(context)
+        val maxWorkoutTonnage = WorkoutLog.getMaxWorkoutTonnage(context)
+        val hasEarlyMorning = WorkoutLog.hasEarlyMorningWorkout(context)
         val bodyweightEntries = WorkoutLog.loadBodyweight(context).size
         val totalSets = allLogs.values.sumOf { it.sets.size }
         val allExercises = ALL_WORKOUTS.values.flatMap { it.exercises }.distinctBy { it.name }
@@ -125,10 +128,11 @@ object AchievementsManager {
             val current = when (achievement.type) {
                 "workouts" -> totalWorkouts
                 "streak" -> streak
-                "tonnage" -> todayTonnage.toInt()
+                "tonnage" -> maxWorkoutTonnage.toInt()
                 "records" -> recordCount
                 "total_sets" -> totalSets
                 "bodyweight" -> bodyweightEntries
+                "early_morning" -> if (hasEarlyMorning) 1 else 0
                 else -> 0
             }
             progress[achievement.id] = Pair(current, achievement.requirement)
