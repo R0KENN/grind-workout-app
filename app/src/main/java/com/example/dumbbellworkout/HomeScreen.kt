@@ -23,7 +23,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.dumbbellworkout.ui.components.*
 import com.example.dumbbellworkout.viewmodel.HomeViewModel
-val (haptic, view) = rememberHaptics()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +42,19 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollState = rememberLazyListState()
+    val (haptic, view) = rememberHaptics()
+
+// Обёртки для навигации с тактильной отдачей.
+// Делаем их локальными функциями, чтобы не дублировать Haptics.click() в каждом колбэке.
+    val navWithHaptic: (() -> Unit) -> Unit = { action ->
+        Haptics.click(haptic); action()
+    }
+    val startWithHaptic: (String) -> Unit = { id ->
+        Haptics.heavy(view, haptic); onStartWorkout(id)
+    }
+    val viewWithHaptic: (String) -> Unit = { id ->
+        Haptics.click(haptic); onViewWorkout(id)
+    }
 
     Scaffold(
         topBar = {
@@ -80,7 +92,7 @@ fun HomeScreen(
                         RecoveryBanner(
                             missedWorkoutName = state.missedWorkoutName,
                             missedWorkoutId = state.missedWorkoutId,
-                            onStartWorkout = onStartWorkout
+                            onStartWorkout = startWithHaptic
                         )
                     }
                 }
@@ -112,7 +124,7 @@ fun HomeScreen(
                     TodayWorkoutCard(
                         workout = state.todayWorkout,
                         isRestDay = state.isRestDay,
-                        onStartWorkout = onStartWorkout
+                        onStartWorkout = startWithHaptic
                     )
                 }
             }
@@ -170,12 +182,12 @@ fun HomeScreen(
             // ── Быстрые действия ──
             item(key = "actions") {
                 QuickActions(
-                    onNavigateToBodyweight = onNavigateToBodyweight,
-                    onNavigateToCharts = onNavigateToCharts,
-                    onNavigateToHeatMap = onNavigateToHeatMap,
-                    onNavigateToEditLog = onNavigateToEditLog,
-                    onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToHistory = onNavigateToHistory
+                    onNavigateToBodyweight = { navWithHaptic(onNavigateToBodyweight) },
+                    onNavigateToCharts = { navWithHaptic(onNavigateToCharts) },
+                    onNavigateToHeatMap = { navWithHaptic(onNavigateToHeatMap) },
+                    onNavigateToEditLog = { navWithHaptic(onNavigateToEditLog) },
+                    onNavigateToSettings = { navWithHaptic(onNavigateToSettings) },
+                    onNavigateToHistory = { navWithHaptic(onNavigateToHistory) }
                 )
             }
 
@@ -187,7 +199,7 @@ fun HomeScreen(
 
             val programs = ALL_WORKOUTS.values.filter { it.id != "rest" }.toList()
             itemsIndexed(programs, key = { _, p -> p.id }) { _, program ->
-                ProgramItem(program = program, onClick = { onViewWorkout(program.id) })
+                ProgramItem(program = program, onClick = { viewWithHaptic(program.id) })
             }
 
             item(key = "spacer") { Spacer(modifier = Modifier.height(8.dp)) }

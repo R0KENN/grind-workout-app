@@ -109,7 +109,10 @@ fun GlassBottomNavBar(
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
-                                ) { onStartWorkout() },
+                                ) {
+                                    Haptics.heavy(view, haptic)
+                                    onStartWorkout()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(item.icon, fontSize = 24.sp)
@@ -156,7 +159,10 @@ fun GlassBottomNavBar(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { onNavigate(item.route) }
+                            ) {
+                                Haptics.click(haptic)
+                                onNavigate(item.route)
+                            }
                             .padding(vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
