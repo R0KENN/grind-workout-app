@@ -363,18 +363,6 @@ object WorkoutLog {
     }
 
     /**
-     * Результат подсказки веса для следующего подхода.
-     * @param suggestedWeight рекомендуемый вес
-     * @param delta изменение относительно последнего: > 0 — прогресс, < 0 — снижение, 0 — без изменений
-     * @param reason человекочитаемая причина для подсказки в UI
-     */
-    data class WeightSuggestion(
-        val suggestedWeight: Float,
-        val delta: Float,
-        val reason: String
-    )
-
-    /**
      * Рассчитывает подсказку веса для упражнения на основе последней (не сегодняшней) тренировки.
      *
      * Логика:
