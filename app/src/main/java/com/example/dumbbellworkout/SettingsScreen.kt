@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import com.example.dumbbellworkout.ui.AppIcon
+import com.example.dumbbellworkout.ui.AppIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,7 +56,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text("Настройки", fontWeight = FontWeight.Bold)
                     }
-                }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },

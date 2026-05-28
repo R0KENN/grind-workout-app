@@ -116,21 +116,11 @@ fun GlassBottomNavBar(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-// центральная кнопка:
                             com.example.dumbbellworkout.ui.AppIcon(
                                 icon = item.icon,
                                 contentDescription = item.label,
                                 size = 26.dp,
                                 tint = Color.White
-                            )
-                            // обычные пункты:
-                            androidx.compose.material3.Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                                tint = textColor,
-                                modifier = Modifier
-                                    .size(22.dp)
-                                    .scale(animatedScale)
                             )
                         }
                     }
@@ -182,10 +172,13 @@ fun GlassBottomNavBar(
                             .padding(vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            item.icon,
-                            fontSize = 20.sp,
-                            modifier = Modifier.scale(animatedScale)
+                        androidx.compose.material3.Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.label,
+                            tint = textColor,
+                            modifier = Modifier
+                                .size(22.dp)
+                                .scale(animatedScale)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(

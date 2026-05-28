@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.example.dumbbellworkout"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.dumbbellworkout"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 2
         versionName = "1.1"
 
@@ -58,7 +58,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("com.composables:icons-lucide-android:1.0.0")
+    implementation("com.composables:icons-lucide-android:2.2.1")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
