@@ -32,12 +32,13 @@ fun BodyweightScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("⚖️ Вес тела", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад")
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AppIcon(AppIcons.Settings, size = 20.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Настройки", fontWeight = FontWeight.Bold)
                     }
-                },
+                }
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },

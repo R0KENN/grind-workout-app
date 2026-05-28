@@ -24,12 +24,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.dumbbellworkout.data.repository.WorkoutRepository
 import com.example.dumbbellworkout.ui.screens.HistoryScreen
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.animation.doOnEnd
 import android.animation.ObjectAnimator
 import android.view.View
-import kotlinx.coroutines.delay
+import android.os.Build
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +56,18 @@ class MainActivity : ComponentActivity() {
 
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        MotivationalNotifications.schedule(this, 10, 0)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
+            }
+        }
+        if (NotificationHelper.isEnabled(this)) {
+            val h = NotificationHelper.getSavedHour(this)
+            val m = NotificationHelper.getSavedMinute(this)
+            MotivationalNotifications.schedule(this, h, m)
+        }
 
         setContent {
             WorkoutTheme {

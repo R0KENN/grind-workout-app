@@ -112,7 +112,8 @@ class WorkoutRepository(context: Context) {
     fun calculate1RM(weight: Float, reps: Int): Float {
         if (reps <= 0 || weight <= 0) return 0f
         if (reps == 1) return weight
-        return weight * (1f + reps / 30f)
+        // Формула Эпли
+        return weight * (1f + reps.toFloat() / 30f)
     }
 
     suspend fun getBest1RM(exerciseName: String): Float {

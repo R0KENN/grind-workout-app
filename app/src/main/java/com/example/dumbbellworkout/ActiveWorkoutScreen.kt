@@ -53,6 +53,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     val progressionStep = remember { UserPreferences.getProgressionStep(context) }
     var editingSet by remember { mutableStateOf<LoggedSet?>(null) }
     var completedSetsToday by remember { mutableStateOf(listOf<LoggedSet>()) }
+    var totalSets by remember { mutableIntStateOf(0) }          // ← перенесли сюда
 
 // Перезагружаем список выполненных подходов текущего упражнения при смене упражнения и при сохранении подхода
     LaunchedEffect(exerciseIndex, totalSets) {
@@ -67,8 +68,8 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     var elapsedSeconds by remember { mutableIntStateOf(0) }
     var timerRunning by remember { mutableStateOf(true) }
     var sessionTonnage by remember { mutableFloatStateOf(0f) }
-    var totalSets by remember { mutableIntStateOf(0) }
     var sessionRecords by remember { mutableIntStateOf(0) }
+
 
     var showNoteDialog by remember { mutableStateOf(false) }
     var noteText by remember { mutableStateOf("") }
@@ -174,34 +175,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         } else {
             isFinished = true; timerRunning = false
         }
-    }
-
-    // ── Подсказка прогрессии ──
-    weightSuggestion?.takeIf { it.delta != 0f }?.let { sug ->
-        val shape = RoundedCornerShape(10.dp)
-        val accent = if (sug.delta > 0) Color(0xFF4CAF50) else Color(0xFFFFA726)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(accent.copy(alpha = 0.12f))
-                .border(1.dp, accent.copy(alpha = 0.3f), shape)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(if (sug.delta > 0) "📈" else "📉", fontSize = 16.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "${if (sug.delta > 0) "+" else ""}${"%.1f".format(sug.delta)} кг",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = accent
-                )
-                Text(sug.reason, fontSize = 11.sp, color = Color.White.copy(alpha = 0.6f))
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
     }
 
     fun skipExercise() {
@@ -551,6 +524,53 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         return
     }
 
+    // ── Диалог подтверждения выхода ──
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("Завершить тренировку?", fontWeight = FontWeight.Bold, fontSize = 17.sp) },
+            text = {
+                Column {
+                    Text(
+                        "У тебя уже $totalSets ${pluralSets(totalSets)} в этой сессии.",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Прогресс уже сохранён. Выйти сейчас или показать итоги?",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.5f),
+                        lineHeight = 18.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Haptics.heavy(view, haptic)
+                    showExitDialog = false
+                    isFinished = true       // запускаем экран итогов
+                    timerRunning = false
+                }) { Text("Показать итоги", color = Purple, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        Haptics.reject(view, haptic)
+                        showExitDialog = false
+                        onFinish()
+                    }) { Text("Выйти без итогов", color = Color.White.copy(alpha = 0.6f)) }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text("Отмена", color = Color.White.copy(alpha = 0.4f))
+                    }
+                }
+            },
+            containerColor = Color(0xFF1A1A2E),
+            shape = RoundedCornerShape(20.dp)
+        )
+    }
+
     if (currentExercise == null) return
 
     val progress = (exerciseIndex + currentSet.toFloat() / currentExercise.sets) / workout.exercises.size
@@ -656,6 +676,34 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Повторения", fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f))
                                 Text(currentExercise.reps, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B6B))
+                            }
+                        }
+                    }
+                }
+
+                item(key = "weight_suggestion") {
+                    weightSuggestion?.takeIf { it.delta != 0f }?.let { sug ->
+                        val shape = RoundedCornerShape(10.dp)
+                        val accent = if (sug.delta > 0) Color(0xFF4CAF50) else Color(0xFFFFA726)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(shape)
+                                .background(accent.copy(alpha = 0.12f))
+                                .border(1.dp, accent.copy(alpha = 0.3f), shape)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(if (sug.delta > 0) "📈" else "📉", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${if (sug.delta > 0) "+" else ""}${"%.1f".format(sug.delta)} кг",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accent
+                                )
+                                Text(sug.reason, fontSize = 11.sp, color = Color.White.copy(alpha = 0.6f))
                             }
                         }
                     }
@@ -780,52 +828,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 }
 
-                // ── Диалог подтверждения выхода ──
-                if (showExitDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showExitDialog = false },
-                        title = { Text("Завершить тренировку?", fontWeight = FontWeight.Bold, fontSize = 17.sp) },
-                        text = {
-                            Column {
-                                Text(
-                                    "У тебя уже $totalSets ${pluralSets(totalSets)} в этой сессии.",
-                                    fontSize = 14.sp,
-                                    color = Color.White.copy(alpha = 0.8f)
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    "Прогресс уже сохранён. Выйти сейчас или показать итоги?",
-                                    fontSize = 13.sp,
-                                    color = Color.White.copy(alpha = 0.5f),
-                                    lineHeight = 18.sp
-                                )
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                Haptics.heavy(view, haptic)
-                                showExitDialog = false
-                                isFinished = true       // запускаем экран итогов
-                                timerRunning = false
-                            }) { Text("Показать итоги", color = Purple, fontWeight = FontWeight.Bold) }
-                        },
-                        dismissButton = {
-                            Row {
-                                TextButton(onClick = {
-                                    Haptics.reject(view, haptic)
-                                    showExitDialog = false
-                                    onFinish()
-                                }) { Text("Выйти без итогов", color = Color.White.copy(alpha = 0.6f)) }
-                                Spacer(modifier = Modifier.width(4.dp))
-                                TextButton(onClick = { showExitDialog = false }) {
-                                    Text("Отмена", color = Color.White.copy(alpha = 0.4f))
-                                }
-                            }
-                        },
-                        containerColor = Color(0xFF1A1A2E),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                }
 
                 if (!isResting) {
                     item(key = "weight_input") {

@@ -11,6 +11,7 @@ data class Achievement(
     val icon: String,
     val requirement: Int,
     val type: String
+    val vectorIcon: ImageVector,
 )
 
 object AchievementsManager {

@@ -1,19 +1,20 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.example.dumbbellworkout"
-    compileSdk = 36                    // было 35
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.dumbbellworkout"
         minSdk = 26
-        targetSdk = 36                 // было 35
-        versionCode = 2                // было 1 — поднимаем, раз меняем поведение
-        versionName = "1.1"            // было "1.0"
+        targetSdk = 35
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -27,12 +28,15 @@ android {
             )
         }
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -54,7 +58,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.composables:icons-lucide-android:1.0.0")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -70,4 +74,7 @@ dependencies {
     // ── ViewModel ──
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
+}
+kotlin {
+    jvmToolchain(17)
 }

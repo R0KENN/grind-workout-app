@@ -22,11 +22,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.animation.core.animateFloatAsState
-
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.dumbbellworkout.ui.AppIcons
 
 data class BottomNavItem(
     val route: String,
-    val icon: String,
+    val icon: ImageVector,   // ← было String
     val label: String,
     val isCenter: Boolean = false
 )
@@ -39,11 +40,11 @@ fun GlassBottomNavBar(
 ) {
     val (haptic, view) = rememberHaptics()
     val items = listOf(
-        BottomNavItem("home", "🏠", "Главная"),
-        BottomNavItem("schedule", "📅", "Расписание"),
-        BottomNavItem("workout", "🏋️", "Старт", isCenter = true),
-        BottomNavItem("stats", "📊", "Статистика"),
-        BottomNavItem("achievements", "🏆", "Ачивки")
+        BottomNavItem("home", AppIcons.Home, "Главная"),
+        BottomNavItem("schedule", AppIcons.Schedule, "Расписание"),
+        BottomNavItem("workout", AppIcons.Workout, "Старт", isCenter = true),
+        BottomNavItem("stats", AppIcons.Stats, "Статистика"),
+        BottomNavItem("achievements", AppIcons.Achievements, "Ачивки")
     )
 
     val shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
@@ -115,7 +116,22 @@ fun GlassBottomNavBar(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(item.icon, fontSize = 24.sp)
+// центральная кнопка:
+                            com.example.dumbbellworkout.ui.AppIcon(
+                                icon = item.icon,
+                                contentDescription = item.label,
+                                size = 26.dp,
+                                tint = Color.White
+                            )
+                            // обычные пункты:
+                            androidx.compose.material3.Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.label,
+                                tint = textColor,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .scale(animatedScale)
+                            )
                         }
                     }
                 } else {
