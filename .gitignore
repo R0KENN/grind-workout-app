@@ -12,6 +12,9 @@ captures/
 .cxx/
 .externalNativeBuild/
 
+# Gradle cache
+.gradle/
+
 # Local config
 local.properties
 keystore.properties
