@@ -1,11 +1,24 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    id("com.google.dagger.hilt.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
+}
+
+// Читаем keystore.properties (если есть)
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        load(FileInputStream(keystorePropertiesFile))
+    }
 }
 
 android {
-    namespace = "com.example.dumbbellworkout"
+    namespace = "com.example.dumbbellworkout" // ⚠️ позже поменяем, см. ниже
     compileSdk = 36
 
     defaultConfig {
@@ -16,15 +29,35 @@ android {
         versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
     }
 
     buildTypes {
-        release {
+        debug {
             isMinifyEnabled = false
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            isDebuggable = true
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -59,18 +92,25 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("com.composables:icons-lucide:1.1.0")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
-    implementation("com.google.code.gson:gson:2.11.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
     implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-beta.3")
     implementation("androidx.compose.animation:animation:1.7.6")
+    implementation("com.google.dagger:hilt-android:2.52")
+    ksp("com.google.dagger:hilt-compiler:2.52")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("androidx.datastore:datastore:1.1.2")
 
-    // ── Room ──
+    // Room
     implementation("androidx.room:room-runtime:2.7.1")
     implementation("androidx.room:room-ktx:2.7.1")
     ksp("androidx.room:room-compiler:2.7.1")
 
-    // ── ViewModel ──
+    // ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
+
+    // ⚠️ Gson пока оставляем, удалим в этапе 3 после миграции
+    implementation("com.google.code.gson:gson:2.11.0")
 }

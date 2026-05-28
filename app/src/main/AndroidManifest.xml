@@ -17,6 +17,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App.Splash"
         tools:targetApi="31">
+        android:name=".GrindApp"
 
         <activity
             android:name=".MainActivity"

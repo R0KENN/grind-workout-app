@@ -87,6 +87,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() { ... }
 
 @Composable
 fun MainApp() {
