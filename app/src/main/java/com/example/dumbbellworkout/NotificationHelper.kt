@@ -127,15 +127,3 @@ class NotificationReceiver : BroadcastReceiver() {
         manager.notify(1, notification)
     }
 }
-
-class BootReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-            if (NotificationHelper.isEnabled(context)) {
-                val hour = NotificationHelper.getSavedHour(context)
-                val minute = NotificationHelper.getSavedMinute(context)
-                NotificationHelper.scheduleDailyReminder(context, hour, minute)
-            }
-        }
-    }
-}

@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
@@ -58,7 +57,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("com.composables:icons-lucide-android:2.2.1")
+    implementation("com.composables:icons-lucide:1.1.0")
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -74,7 +73,4 @@ dependencies {
     // ── ViewModel ──
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
-}
-kotlin {
-    jvmToolchain(17)
 }

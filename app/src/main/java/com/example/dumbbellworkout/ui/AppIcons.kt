@@ -1,6 +1,7 @@
 package com.example.dumbbellworkout.ui
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.ArrowLeft
 import com.composables.icons.lucide.Bell
 import com.composables.icons.lucide.Brain
@@ -18,7 +19,6 @@ import com.composables.icons.lucide.Flame
 import com.composables.icons.lucide.House
 import com.composables.icons.lucide.LayoutGrid
 import com.composables.icons.lucide.Lock
-import com.composables.icons.lucide.Lucide
 import com.composables.icons.lucide.Medal
 import com.composables.icons.lucide.Moon
 import com.composables.icons.lucide.Pencil

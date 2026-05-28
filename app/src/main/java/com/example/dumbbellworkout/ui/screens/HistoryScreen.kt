@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,10 +47,10 @@ fun HistoryScreen(
                 },
                 actions = {
                     IconButton(onClick = { showFilterSheet = true }) {
-                        Icon(
-                            Icons.Default.FilterList,
-                            contentDescription = "Фильтр по упражнению",
-                            tint = if (state.selectedExerciseFilter != null) Purple else Color.White.copy(alpha = 0.6f)
+                        Text(
+                            "⚙",
+                            fontSize = 20.sp,
+                            color = if (state.selectedExerciseFilter != null) Purple else Color.White.copy(alpha = 0.6f)
                         )
                     }
                 },

@@ -20,6 +20,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dumbbellworkout.ui.AppIcon
+import com.example.dumbbellworkout.ui.AppIcons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,11 +36,16 @@ fun BodyweightScreen(onBack: () -> Unit) {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AppIcon(AppIcons.Settings, size = 20.dp)
+                        AppIcon(AppIcons.Bodyweight, size = 20.dp)
                         Spacer(Modifier.width(8.dp))
-                        Text("Настройки", fontWeight = FontWeight.Bold)
+                        Text("Вес тела", fontWeight = FontWeight.Bold)
                     }
-                }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
