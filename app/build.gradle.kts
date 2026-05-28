@@ -1,19 +1,9 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
-}
-
-val keystorePropertiesFile = rootProject.file("keystore.properties")
-val keystoreProperties = Properties().apply {
-    if (keystorePropertiesFile.exists()) {
-        load(FileInputStream(keystorePropertiesFile))
-    }
 }
 
 android {
@@ -31,17 +21,6 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
-    signingConfigs {
-        create("release") {
-            if (keystorePropertiesFile.exists()) {
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-            }
-        }
-    }
-
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -56,7 +35,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            // Подписываем релиз той же подписью, что и debug — для личного использования.
+            // Это не требует keystore.properties.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
@@ -91,7 +72,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("com.composables:icons-lucide:1.1.0")
 
-    // DataStore (старый Preferences оставляем для совместимости, новый для Proto)
+    // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("androidx.datastore:datastore:1.1.2")
 
@@ -101,8 +82,8 @@ dependencies {
     implementation("androidx.compose.animation:animation:1.7.6")
 
     // Hilt
-    implementation("com.google.dagger:hilt-android:2.52")
-    ksp("com.google.dagger:hilt-compiler:2.52")
+    implementation("com.google.dagger:hilt-android:2.59")
+    ksp("com.google.dagger:hilt-compiler:2.59")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Kotlinx Serialization
@@ -117,6 +98,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
 
-    // Пока оставляем Gson, удалим в Этапе 3
+    // Gson (пока используется в коде — удалим в этапе 3)
     implementation("com.google.code.gson:gson:2.11.0")
 }
