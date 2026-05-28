@@ -3,6 +3,7 @@ package com.example.dumbbellworkout.di
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.core.DataStoreFactory
+import androidx.datastore.dataStoreFile
 import com.example.dumbbellworkout.data.prefs.UserPrefs
 import com.example.dumbbellworkout.data.prefs.UserPrefsSerializer
 import dagger.Module

@@ -10,11 +10,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 enum class FeedbackType {
-    Tick,        // короткий клик (выбор)
-    Success,     // подход завершён
-    Heavy,       // тренировка завершена / достижение
-    Warning,     // конец отдыха
-    Error
+    Tick, Success, Heavy, Warning, Error
 }
 
 @Singleton

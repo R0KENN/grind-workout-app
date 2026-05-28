@@ -19,7 +19,6 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): AppDatabase =
         Room.databaseBuilder(ctx, AppDatabase::class.java, "grind.db")
-            // .addMigrations(...) ← добавим в этапе 4
             .build()
 
     @Provides

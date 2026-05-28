@@ -29,12 +29,13 @@ import androidx.core.animation.doOnEnd
 import android.animation.ObjectAnimator
 import android.view.View
 import android.os.Build
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // ВАЖНО: installSplashScreen() должен быть вызван до super.onCreate()
         val splashScreen = installSplashScreen()
-
         // Держим сплеш на экране, пока флаг не станет false (мы его поставим
         // после миграции данных и первой композиции).
         var keepSplash = true
@@ -86,9 +87,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-@AndroidEntryPoint
-class MainActivity : ComponentActivity() { ... }
 
 @Composable
 fun MainApp() {

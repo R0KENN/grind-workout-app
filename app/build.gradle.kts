@@ -9,7 +9,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-// Читаем keystore.properties (если есть)
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
@@ -18,7 +17,7 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.example.dumbbellworkout" // ⚠️ позже поменяем, см. ниже
+    namespace = "com.example.dumbbellworkout"
     compileSdk = 36
 
     defaultConfig {
@@ -91,16 +90,23 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("com.composables:icons-lucide:1.1.0")
+
+    // DataStore (старый Preferences оставляем для совместимости, новый для Proto)
     implementation("androidx.datastore:datastore-preferences:1.1.2")
+    implementation("androidx.datastore:datastore:1.1.2")
+
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-gif:2.7.0")
     implementation("com.patrykandpatrick.vico:compose-m3:2.0.0-beta.3")
     implementation("androidx.compose.animation:animation:1.7.6")
+
+    // Hilt
     implementation("com.google.dagger:hilt-android:2.52")
     ksp("com.google.dagger:hilt-compiler:2.52")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
-    implementation("androidx.datastore:datastore:1.1.2")
 
     // Room
     implementation("androidx.room:room-runtime:2.7.1")
@@ -111,6 +117,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")
 
-    // ⚠️ Gson пока оставляем, удалим в этапе 3 после миграции
+    // Пока оставляем Gson, удалим в Этапе 3
     implementation("com.google.code.gson:gson:2.11.0")
 }
