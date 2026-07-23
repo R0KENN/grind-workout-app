@@ -775,7 +775,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                             )
                         }
                     }
-                    if (suggestion != null) {
+                    suggestion?.let { currentSuggestion ->
                         val shape = RoundedCornerShape(12.dp)
                         Box(
                             modifier = Modifier
@@ -794,12 +794,12 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "Рекомендуем: ${suggestion.suggestedWeight} кг (было ${suggestion.currentWeight} кг)",
+                                    "Рекомендуем: ${currentSuggestion.suggestedWeight} кг (было ${currentSuggestion.currentWeight} кг)",
                                     fontSize = 12.sp,
                                     color = Color.White.copy(alpha = 0.6f)
                                 )
                                 Text(
-                                    suggestion.reason,
+                                    currentSuggestion.reason,
                                     fontSize = 11.sp,
                                     color = Color.White.copy(alpha = 0.35f)
                                 )

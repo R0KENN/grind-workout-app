@@ -44,6 +44,7 @@ import java.util.Calendar
 fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onStart: () -> Unit) {
     val context = LocalContext.current
     val workout = ALL_WORKOUTS[workoutId] ?: return
+    var selectedExercise by remember { mutableStateOf<Exercise?>(null) }
 
     Scaffold(
         topBar = {
@@ -122,6 +123,7 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onStart: () -> Un
                             )
                         )
                         .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
+                        .clickable { selectedExercise = exercise }
                         .padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -171,11 +173,190 @@ fun WorkoutDetailScreen(workoutId: String, onBack: () -> Unit, onStart: () -> Un
                                 }
                             }
                         }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "›",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Light,
+                            color = Color.White.copy(alpha = 0.25f)
+                        )
                     }
                 }
             }
             item { Spacer(modifier = Modifier.height(72.dp)) }
         }
+    }
+
+    selectedExercise?.let { exercise ->
+        val lastWeight = WorkoutLog.getLastWeight(context, exercise.name)
+
+        AlertDialog(
+            onDismissRequest = { selectedExercise = null },
+            containerColor = Color(0xFF151515),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+            title = {
+                Text(
+                    exercise.name,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (exercise.gifRes != 0) {
+                        GifImage(
+                            gifRes = exercise.gifRes,
+                            exerciseName = exercise.name,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        val placeholderShape = RoundedCornerShape(12.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp)
+                                .clip(placeholderShape)
+                                .background(Color.White.copy(alpha = 0.04f))
+                                .border(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.06f),
+                                    placeholderShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "GIF пока не добавлен",
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.35f)
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ExercisePreviewValue(
+                            title = "Подходы",
+                            value = exercise.sets.toString(),
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExercisePreviewValue(
+                            title = if (exercise.reps.contains("сек", ignoreCase = true)) {
+                                "Время"
+                            } else {
+                                "Повторения"
+                            },
+                            value = exercise.reps,
+                            modifier = Modifier.weight(1f)
+                        )
+                        ExercisePreviewValue(
+                            title = "Отдых",
+                            value = exercise.restDisplay,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "Целевые мышцы",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Purple
+                        )
+                        Text(
+                            exercise.target,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+
+                    if (lastWeight != null) {
+                        val weightShape = RoundedCornerShape(10.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(weightShape)
+                                .background(Purple.copy(alpha = 0.08f))
+                                .border(
+                                    1.dp,
+                                    Purple.copy(alpha = 0.14f),
+                                    weightShape
+                                )
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Последний вес",
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.5f),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                "$lastWeight кг",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Purple
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedExercise = null }) {
+                    Text(
+                        "Закрыть",
+                        fontWeight = FontWeight.Bold,
+                        color = Purple
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ExercisePreviewValue(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    val shape = RoundedCornerShape(10.dp)
+
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(
+                1.dp,
+                Color.White.copy(alpha = 0.06f),
+                shape
+            )
+            .padding(horizontal = 6.dp, vertical = 9.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            title,
+            fontSize = 9.sp,
+            color = Color.White.copy(alpha = 0.35f),
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        Text(
+            value,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            maxLines = 2
+        )
     }
 }
 
