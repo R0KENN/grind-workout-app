@@ -24,10 +24,9 @@ import com.example.dumbbellworkout.Workout
 @Composable
 fun ProgramItem(program: Workout, onClick: () -> Unit) {
     val emoji = when {
-        program.name.contains("PUSH", true) -> "💪"
-        program.name.contains("PULL", true) -> "🏋️"
-        program.name.contains("SQUAD", true) || program.name.contains("LEG", true) -> "🦵"
-        program.name.contains("POWER", true) -> "⚡"
+        program.name.contains("ПРЕСС", true) || program.name.contains("КОР", true) -> "🔥"
+        program.name.contains("НИЗ ТЕЛА", true) -> "🦵"
+        program.name.contains("ВЕРХ ТЕЛА", true) -> "💪"
         else -> "🏋️"
     }
     val shape = RoundedCornerShape(14.dp)
