@@ -68,6 +68,41 @@ interface WorkoutDao {
     @Query("DELETE FROM workout_sets WHERE id = :id")
     suspend fun deleteSet(id: Long)
 
+    @Query("""
+        UPDATE workout_sets
+        SET weight = :newWeight, reps = :newReps
+        WHERE date = :date
+          AND exerciseName = :exerciseName
+          AND setNumber = :setNumber
+          AND weight = :oldWeight
+          AND reps = :oldReps
+    """)
+    suspend fun updateMatchingSet(
+        date: String,
+        exerciseName: String,
+        setNumber: Int,
+        oldWeight: Float,
+        oldReps: Int,
+        newWeight: Float,
+        newReps: Int
+    )
+
+    @Query("""
+        DELETE FROM workout_sets
+        WHERE date = :date
+          AND exerciseName = :exerciseName
+          AND setNumber = :setNumber
+          AND weight = :weight
+          AND reps = :reps
+    """)
+    suspend fun deleteMatchingSet(
+        date: String,
+        exerciseName: String,
+        setNumber: Int,
+        weight: Float,
+        reps: Int
+    )
+
     @Query("DELETE FROM workout_sets WHERE date = :date")
     suspend fun deleteDay(date: String)
 

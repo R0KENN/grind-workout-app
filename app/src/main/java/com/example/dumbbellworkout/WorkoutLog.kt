@@ -253,7 +253,7 @@ object WorkoutLog {
             t.contains("квадрицепс") || t.contains("ягодиц") || t.contains("приводящ") -> "Ноги"
             t.contains("бедр") || t.contains("задняя цепь") -> "Ноги"
             t.contains("икр") || t.contains("камбаловидн") -> "Икры"
-            t.contains("пресс") || t.contains("кор") -> "Кор"
+            t.contains("пресс") || t.contains("кор") || t.contains("живот") -> "Кор"
             t.contains("предплечь") || t.contains("запясть") || t.contains("сгибател") || t.contains("разгибател") -> "Предплечья"
             t.contains("трапец") -> "Спина"
             else -> "Другое"

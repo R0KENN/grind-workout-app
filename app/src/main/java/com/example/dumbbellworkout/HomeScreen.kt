@@ -57,13 +57,8 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("GRIND", fontWeight = FontWeight.Bold, fontSize = 22.sp) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent)
-            )
-        },
-        containerColor = Color.Black
+        containerColor = Color.Black,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         LazyColumn(
             state = scrollState,

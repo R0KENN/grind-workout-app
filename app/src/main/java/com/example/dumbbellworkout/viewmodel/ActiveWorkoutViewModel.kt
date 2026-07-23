@@ -56,10 +56,16 @@ class ActiveWorkoutViewModel(application: Application) : AndroidViewModel(applic
             val note = NotesManager.getNote(context, exercise.name)
 
             // Прогрессивная перегрузка
-            val targetReps = exercise.reps
-                .replace(" на руку", "").replace(" на сторону", "")
-                .split("-").lastOrNull()?.trim()?.toIntOrNull() ?: 12
-            val suggestion = repo.getProgressiveOverloadSuggestion(exercise.name, targetReps)
+            val targetReps = Regex("""\d+""")
+                .findAll(exercise.reps)
+                .map { it.value.toInt() }
+                .lastOrNull()
+                ?: 12
+            val suggestion = if (exercise.reps.contains("сек", ignoreCase = true)) {
+                null
+            } else {
+                repo.getProgressiveOverloadSuggestion(exercise.name, targetReps)
+            }
 
             _uiState.value = _uiState.value.copy(
                 lastWeight = lastWeight,

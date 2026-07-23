@@ -84,6 +84,42 @@ class WorkoutRepository(context: Context) {
 
     suspend fun deleteSet(id: Long) = dao.deleteSet(id)
 
+    suspend fun updateMatchingSet(
+        date: String,
+        exerciseName: String,
+        setNumber: Int,
+        oldWeight: Float,
+        oldReps: Int,
+        newWeight: Float,
+        newReps: Int
+    ) {
+        dao.updateMatchingSet(
+            date = date,
+            exerciseName = exerciseName,
+            setNumber = setNumber,
+            oldWeight = oldWeight,
+            oldReps = oldReps,
+            newWeight = newWeight,
+            newReps = newReps
+        )
+    }
+
+    suspend fun deleteMatchingSet(
+        date: String,
+        exerciseName: String,
+        setNumber: Int,
+        weight: Float,
+        reps: Int
+    ) {
+        dao.deleteMatchingSet(
+            date = date,
+            exerciseName = exerciseName,
+            setNumber = setNumber,
+            weight = weight,
+            reps = reps
+        )
+    }
+
     // ══════════ Вес тела ══════════
 
     suspend fun saveBodyweight(weight: Float) {
@@ -237,10 +273,12 @@ class WorkoutRepository(context: Context) {
             "плеч" in t || "дельт" in t -> "Плечи"
             "бицепс" in t || "бицеп" in t -> "Бицепс"
             "трицепс" in t || "трицеп" in t -> "Трицепс"
-            "ног" in t || "бёдр" in t || "бедр" in t || "ягод" in t -> "Ноги"
-            "икр" in t -> "Икры"
-            "прес" in t || "кор" in t -> "Кор"
-            "предплеч" in t || "хват" in t -> "Предплечья"
+            "икр" in t || "камбаловид" in t -> "Икры"
+            "прес" in t || "кор" in t || "живот" in t -> "Кор"
+            "предплеч" in t || "хват" in t || "кист" in t ||
+                    "сгибател" in t || "разгибател" in t -> "Предплечья"
+            "ног" in t || "бёдр" in t || "бедр" in t || "ягод" in t ||
+                    "квадрицепс" in t || "приводящ" in t -> "Ноги"
             else -> "Другое"
         }
     }

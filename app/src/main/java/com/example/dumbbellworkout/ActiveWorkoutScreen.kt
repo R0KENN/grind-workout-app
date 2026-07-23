@@ -36,6 +36,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     val context = LocalContext.current
     val workout = ALL_WORKOUTS[workoutId] ?: return
     val coroutineScope = rememberCoroutineScope()
+    val workoutRepository = remember(context) { WorkoutRepository(context) }
     val (haptic, view) = rememberHaptics()
 
     var exerciseIndex by remember { mutableIntStateOf(0) }
@@ -53,10 +54,11 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
     val progressionStep = remember { UserPreferences.getProgressionStep(context) }
     var editingSet by remember { mutableStateOf<LoggedSet?>(null) }
     var completedSetsToday by remember { mutableStateOf(listOf<LoggedSet>()) }
-    var totalSets by remember { mutableIntStateOf(0) }          // ← перенесли сюда
+    var totalSets by remember { mutableIntStateOf(0) }
+    var logRevision by remember { mutableIntStateOf(0) }
 
-// Перезагружаем список выполненных подходов текущего упражнения при смене упражнения и при сохранении подхода
-    LaunchedEffect(exerciseIndex, totalSets) {
+// Перезагружаем список выполненных подходов текущего упражнения при смене упражнения и при изменении журнала
+    LaunchedEffect(exerciseIndex, totalSets, logRevision) {
         val ex = workout.exercises.getOrNull(exerciseIndex) ?: return@LaunchedEffect
         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
         val today = sdf.format(java.util.Date())
@@ -135,7 +137,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                 val s = "%.1f".format(w)
                 if (s.endsWith(".0")) s.dropLast(2) else s
             } ?: WorkoutLog.getLastWeight(context, nextEx.name)?.toString() ?: ""
-            repsInput = workout.exercises[nextIndex].reps.replace(" на руку", "").replace(" на сторону", "")
+            repsInput = ""
             if (withRest) {
                 restSecondsLeft = restSec
                 isResting = true
@@ -162,7 +164,16 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
         }
 
         WorkoutLog.addSet(context, LoggedSet(ex.name, currentSet, w, r))
-        sessionTonnage += w * r; totalSets++
+        coroutineScope.launch {
+            workoutRepository.addSet(
+                exerciseName = ex.name,
+                setNumber = currentSet,
+                weight = w,
+                reps = r
+            )
+        }
+        sessionTonnage += w * r
+        totalSets++
         weightInput = ""; repsInput = ""
         weightSuggestion = null  // показывали один раз — больше не надо
 
@@ -268,12 +279,22 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                         val today = sdf.format(java.util.Date())
                         WorkoutLog.updateSet(context, today, setToEdit, w, r)
+                        coroutineScope.launch {
+                            workoutRepository.updateMatchingSet(
+                                date = today,
+                                exerciseName = setToEdit.exerciseName,
+                                setNumber = setToEdit.setNumber,
+                                oldWeight = setToEdit.weight,
+                                oldReps = setToEdit.reps,
+                                newWeight = w,
+                                newReps = r
+                            )
+                        }
                         // Пересчитываем сессионную статистику
                         sessionTonnage += (w * r) - (setToEdit.weight * setToEdit.reps)
                         Haptics.confirm(haptic)
                         editingSet = null
-                        // триггерим перезагрузку списка
-                        totalSets = totalSets // no-op чтобы стрельнул LaunchedEffect
+                        logRevision++
                     }
                 }) { Text("Сохранить", color = Purple) }
             },
@@ -283,11 +304,21 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                         val today = sdf.format(java.util.Date())
                         WorkoutLog.deleteSet(context, today, setToEdit)
+                        coroutineScope.launch {
+                            workoutRepository.deleteMatchingSet(
+                                date = today,
+                                exerciseName = setToEdit.exerciseName,
+                                setNumber = setToEdit.setNumber,
+                                weight = setToEdit.weight,
+                                reps = setToEdit.reps
+                            )
+                        }
                         sessionTonnage -= setToEdit.weight * setToEdit.reps
                         totalSets -= 1
                         if (currentSet > 1) currentSet -= 1
                         Haptics.reject(view, haptic)
                         editingSet = null
+                        logRevision++
                     }) { Text("Удалить", color = Color(0xFFE57373)) }
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = { editingSet = null }) {
@@ -573,6 +604,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
 
     if (currentExercise == null) return
 
+    val isTimedExercise = currentExercise.reps.contains("сек", ignoreCase = true)
     val progress = (exerciseIndex + currentSet.toFloat() / currentExercise.sets) / workout.exercises.size
 
     Scaffold(
@@ -674,7 +706,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                         }
                         Box(modifier = Modifier.weight(1f).clip(shape).background(Color.White.copy(alpha = 0.05f)).border(1.dp, Color.White.copy(alpha = 0.06f), shape).padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Повторения", fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f))
+                                Text(if (isTimedExercise) "Время" else "Повторения", fontSize = 10.sp, color = Color.White.copy(alpha = 0.4f))
                                 Text(currentExercise.reps, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B6B))
                             }
                         }
@@ -717,17 +749,22 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                 }
 
                 item(key = "overload_suggestion") {
-                    val suggestion = remember(exerciseIndex) {
-                        // Будет загружаться через ViewModel позже;
-                        // Пока можно использовать синхронный вызов
-                        kotlinx.coroutines.runBlocking {
-                            WorkoutRepository(context)
-                                .getProgressiveOverloadSuggestion(
+                    val suggestion = remember(exerciseIndex, currentExercise.reps) {
+                        if (currentExercise.reps.contains("сек", ignoreCase = true)) {
+                            null
+                        } else {
+                            val targetReps = Regex("""\d+""")
+                                .findAll(currentExercise.reps)
+                                .map { it.value.toInt() }
+                                .lastOrNull()
+                                ?: 12
+
+                            kotlinx.coroutines.runBlocking {
+                                workoutRepository.getProgressiveOverloadSuggestion(
                                     currentExercise.name,
-                                    currentExercise.reps.replace(" на руку", "")
-                                        .replace(" на сторону", "")
-                                        .split("-").lastOrNull()?.trim()?.toIntOrNull() ?: 12
+                                    targetReps
                                 )
+                            }
                         }
                     }
                     if (suggestion != null) {
@@ -842,7 +879,7 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     item(key = "reps_input") {
                         OutlinedTextField(
                             value = repsInput, onValueChange = { repsInput = it },
-                            label = { Text("Повторения", fontSize = 13.sp) },
+                            label = { Text(if (isTimedExercise) "Время (сек)" else "Повторения", fontSize = 13.sp) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Purple, unfocusedBorderColor = Color.White.copy(alpha = 0.1f))
