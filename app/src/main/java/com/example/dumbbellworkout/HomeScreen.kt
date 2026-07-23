@@ -57,8 +57,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        containerColor = Color.Black,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        containerColor = Color.Black
     ) { paddingValues ->
         LazyColumn(
             state = scrollState,

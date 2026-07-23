@@ -71,11 +71,17 @@ interface WorkoutDao {
     @Query("""
         UPDATE workout_sets
         SET weight = :newWeight, reps = :newReps
-        WHERE date = :date
-          AND exerciseName = :exerciseName
-          AND setNumber = :setNumber
-          AND weight = :oldWeight
-          AND reps = :oldReps
+        WHERE id = (
+            SELECT id
+            FROM workout_sets
+            WHERE date = :date
+              AND exerciseName = :exerciseName
+              AND setNumber = :setNumber
+              AND weight = :oldWeight
+              AND reps = :oldReps
+            ORDER BY id DESC
+            LIMIT 1
+        )
     """)
     suspend fun updateMatchingSet(
         date: String,
@@ -89,11 +95,17 @@ interface WorkoutDao {
 
     @Query("""
         DELETE FROM workout_sets
-        WHERE date = :date
-          AND exerciseName = :exerciseName
-          AND setNumber = :setNumber
-          AND weight = :weight
-          AND reps = :reps
+        WHERE id = (
+            SELECT id
+            FROM workout_sets
+            WHERE date = :date
+              AND exerciseName = :exerciseName
+              AND setNumber = :setNumber
+              AND weight = :weight
+              AND reps = :reps
+            ORDER BY id DESC
+            LIMIT 1
+        )
     """)
     suspend fun deleteMatchingSet(
         date: String,

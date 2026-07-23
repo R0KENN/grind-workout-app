@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dumbbellworkout.data.repository.OverloadSuggestion
 import com.example.dumbbellworkout.data.repository.WorkoutRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -329,45 +330,6 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
             containerColor = Color(0xFF1A1A2E),
             shape = RoundedCornerShape(20.dp)
         )
-    }
-
-    // ── Выполненные подходы текущего упражнения ──
-    if (completedSetsToday.isNotEmpty()) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                "Сделано: ${completedSetsToday.size}",
-                fontSize = 11.sp,
-                color = Color.White.copy(alpha = 0.4f)
-            )
-            completedSetsToday.forEach { set ->
-                val shape = RoundedCornerShape(8.dp)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(shape)
-                        .background(Color.White.copy(alpha = 0.04f))
-                        .border(1.dp, Color.White.copy(alpha = 0.05f), shape)
-                        .clickable {
-                            Haptics.click(haptic)
-                            editingSet = set
-                        }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("#${set.setNumber}", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        "${set.weight} кг × ${set.reps}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text("✏️", fontSize = 12.sp)
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
     }
 
     // ===== FINISH SCREEN =====
@@ -695,6 +657,52 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                     }
                 }
 
+                if (completedSetsToday.isNotEmpty()) {
+                    item(key = "completed_sets") {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                "Сделано: ${completedSetsToday.size}",
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.4f)
+                            )
+                            completedSetsToday.forEach { set ->
+                                val shape = RoundedCornerShape(8.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(shape)
+                                        .background(Color.White.copy(alpha = 0.04f))
+                                        .border(1.dp, Color.White.copy(alpha = 0.05f), shape)
+                                        .clickable {
+                                            Haptics.click(haptic)
+                                            editingSet = set
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "#${set.setNumber}",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.5f)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "${set.weight} кг × ${set.reps}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text("✏️", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 item(key = "sets_reps") {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val shape = RoundedCornerShape(12.dp)
@@ -749,22 +757,22 @@ fun ActiveWorkoutScreen(workoutId: String, onFinish: () -> Unit) {
                 }
 
                 item(key = "overload_suggestion") {
-                    val suggestion = remember(exerciseIndex, currentExercise.reps) {
-                        if (currentExercise.reps.contains("сек", ignoreCase = true)) {
-                            null
-                        } else {
+                    val suggestion by produceState<OverloadSuggestion?>(
+                        initialValue = null,
+                        key1 = currentExercise.name,
+                        key2 = currentExercise.reps
+                    ) {
+                        if (!currentExercise.reps.contains("сек", ignoreCase = true)) {
                             val targetReps = Regex("""\d+""")
                                 .findAll(currentExercise.reps)
                                 .map { it.value.toInt() }
                                 .lastOrNull()
                                 ?: 12
 
-                            kotlinx.coroutines.runBlocking {
-                                workoutRepository.getProgressiveOverloadSuggestion(
-                                    currentExercise.name,
-                                    targetReps
-                                )
-                            }
+                            value = workoutRepository.getProgressiveOverloadSuggestion(
+                                currentExercise.name,
+                                targetReps
+                            )
                         }
                     }
                     if (suggestion != null) {

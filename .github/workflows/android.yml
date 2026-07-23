@@ -26,11 +26,9 @@ jobs:
 
       - name: Run lint
         run: ./gradlew lintDebug
-        continue-on-error: true
 
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
-        continue-on-error: true
 
       - name: Build debug APK
         run: ./gradlew assembleDebug
